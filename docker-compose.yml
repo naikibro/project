@@ -1,0 +1,122 @@
+services:
+  # ----- D A T A B A S E S -----
+  db-auth:
+    image: postgres:15-alpine
+    container_name: ${AUTH_SERVICE_DATABASE_CONTAINER_NAME}
+    ports:
+      - "${AUTH_SERVICE_DATABASE_PORT}:5432"
+    environment:
+      POSTGRES_USER: ${AUTH_SERVICE_DATABASE_USER}
+      POSTGRES_PASSWORD: ${AUTH_SERVICE_DATABASE_PASSWORD}
+      POSTGRES_DB: ${AUTH_SERVICE_DATABASE_NAME}
+    networks:
+      - app-network
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "pg_isready",
+          "-U",
+          "${AUTH_SERVICE_DATABASE_USER}",
+          "-d",
+          "${AUTH_SERVICE_DATABASE_NAME}",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    env_file:
+      - .env
+
+  # ----- T E S T   D A T A B A S E S -----
+  db-test-auth:
+    image: postgres:15-alpine
+    container_name: ${AUTH_SERVICE_TEST_DATABASE_CONTAINER_NAME}
+    ports:
+      - "${AUTH_SERVICE_TEST_DATABASE_PORT}:5432"
+    environment:
+      POSTGRES_USER: ${AUTH_SERVICE_TEST_DATABASE_USER}
+      POSTGRES_PASSWORD: ${AUTH_SERVICE_TEST_DATABASE_PASSWORD}
+      POSTGRES_DB: ${AUTH_SERVICE_TEST_DATABASE_NAME}
+    env_file:
+      - .env
+
+  # ----- M I N I O -----
+  minio:
+    image: minio/minio
+    container_name: minio
+    ports:
+      - "9000:9000" # S3 API
+      - "9001:9001" # Web UI
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY}
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio_data:/data
+
+  # ----- M E S S A G I N G -----
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: ${RABBITMQ_CONTAINER_NAME}
+    ports:
+      - "${RABBITMQ_PORT}:5672"
+      - "15672:15672"
+    environment:
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_DEFAULT_USER}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_DEFAULT_PASS}
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "rabbitmqctl", "status"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ----- M I C R O S E R V I C E S -----
+  backend:
+    build: ./services/backend
+    container_name: ${AUTH_SERVICE_CONTAINER_NAME}
+    ports:
+      - "${AUTH_SERVICE_PORT}:${AUTH_SERVICE_PORT}"
+    volumes:
+      - ./services/backend/src:/app/src
+    networks:
+      - app-network
+    environment:
+      - NODE_ENV=dev
+      - POSTGRES_URI=${AUTH_SERVICE_POSTGRES_URI}
+      - POSTGRES_TEST_URI=${AUTH_SERVICE_TEST_POSTGRES_URI}
+      - FRONTEND_URL=${FRONTEND_URL}
+      - PROJECT_NAME=${AUTH_SERVICE_DOCUMENTATION_TITLE}
+      - PORT=${AUTH_SERVICE_PORT}
+      - RESEND_API_KEY=${RESEND_API_KEY}
+      - RABBITMQ_URL=${RABBITMQ_URL}
+
+  # ----- F R O N T E N D -----
+  frontend:
+    container_name: ${FRONTEND_CONTAINER_NAME}
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "${FRONTEND_PORT}:${FRONTEND_PORT}"
+    networks:
+      - app-network
+    volumes:
+      - ./frontend/src:/app/src
+      - ./frontend/package.json:/app/package.json
+      - ./frontend/tsconfig.json:/app/tsconfig.json
+    environment:
+      - NODE_ENV=dev
+      - PROJECT_NAME=${AUTH_SERVICE_DOCUMENTATION_TITLE}
+      - NEXT_PUBLIC_API_URL=${AUTH_SERVICE_URL}
+      - NEXT_PUBLIC_BLOB_STORAGE_URL=${MINIO_URL}
+
+volumes:
+  rabbitmq-data:
+  minio_data:
+networks:
+  app-network:
+    driver: bridge

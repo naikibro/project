@@ -1,0 +1,71 @@
+name: Automated Tests
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+jobs:
+  user-service-tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: services/backend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: services/backend
+        run: npm ci
+
+      - name: Run tests
+        working-directory: services/backend
+        env:
+          NODE_ENV: test
+          MONGO_TEST_URI: mongodb://localhost:27018/schoolinc_test
+          POSTGRES_TEST_URI: postgresql://postgres:postgres@localhost:5433/schoolinc_test
+          JWT_SECRET: test-secret
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          RABBITMQ_URL: ${{ secrets.RABBITMQ_URL }}
+        run: npm test
+
+      - name: Upload test report
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-report-backend
+          path: services/backend/junit.xml
+
+  frontend-tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Run tests
+        working-directory: frontend
+        run: npm test
+
+      - name: Upload test report
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-report-frontend
+          path: frontend/junit.xml
