@@ -62,7 +62,7 @@ describe("UsersList", () => {
 
     fireEvent.click(screen.getAllByText("Delete")[0]);
 
-    expect(screen.getByText("Confirm Deletion")).toBeInTheDocument();
+    expect(screen.getByText("Confirm Account Deletion")).toBeInTheDocument();
   });
 
   it("calls fetchUsers after updating a user", async () => {
@@ -74,7 +74,7 @@ describe("UsersList", () => {
 
     fireEvent.click(screen.getAllByText("Update")[0]);
 
-    fireEvent.click(screen.getByText("Save"));
+    fireEvent.click(screen.getByText("Save Changes"));
 
     await waitFor(() => {
       expect(mockFetchUsers).toHaveBeenCalled();
@@ -92,7 +92,7 @@ describe("UsersList", () => {
     fireEvent.click(screen.getAllByText("Delete")[0]);
 
     const confirmDialog = screen.getByRole("dialog");
-    fireEvent.click(within(confirmDialog).getByText("Delete"));
+    fireEvent.click(within(confirmDialog).getByText("Delete Account"));
 
     await waitFor(() => {
       expect(mockFetchUsers).toHaveBeenCalled();

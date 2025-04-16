@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
 /* eslint-disable @typescript-eslint/unbound-method */
 import { Test, TestingModule } from '@nestjs/testing';
 import { AuthService } from './auth.service';
@@ -32,10 +33,9 @@ describe('AuthService', () => {
           provide: getRepositoryToken(User),
           useValue: {
             findOne: jest.fn(),
-            create: jest
-              .fn()
-              .mockImplementation((user: Partial<User>): User => user as User),
-            save: jest.fn().mockResolvedValue({ id: 1, username: 'testuser' }),
+            create: jest.fn(),
+            save: jest.fn(),
+            update: jest.fn(),
           },
         },
         {
@@ -54,7 +54,6 @@ describe('AuthService', () => {
     }).compile();
 
     authService = module.get<AuthService>(AuthService);
-    usersRepository = module.get<Repository<User>>(getRepositoryToken(User));
     usersRepository = module.get<Repository<User>>(getRepositoryToken(User));
     rolesRepository = module.get<Repository<Role>>(getRepositoryToken(Role));
     jwtService = module.get<JwtService>(JwtService);
@@ -244,6 +243,104 @@ describe('AuthService', () => {
         token: 'test-token',
         newPassword: 'newPassword123',
       });
+    });
+  });
+
+  describe('handleGoogleLogin', () => {
+    const mockGoogleProfile = {
+      email: 'test@example.com',
+      googleId: '123456789',
+      username: 'testuser',
+      picture: 'https://example.com/photo.jpg',
+    };
+
+    it('should create a new user if not exists', async () => {
+      const mockRole = { id: 1, name: 'User' } as Role;
+      const mockUser = {
+        id: '1',
+        email: mockGoogleProfile.email,
+        googleId: mockGoogleProfile.googleId,
+        username: mockGoogleProfile.username,
+        profilePicture: mockGoogleProfile.picture,
+        role: mockRole,
+        isActive: true,
+        acceptedTerms: true,
+        acceptedPrivacyPolicy: true,
+        createdAt: new Date(),
+      } as User;
+
+      jest.spyOn(usersRepository, 'findOne').mockResolvedValueOnce(null);
+      jest.spyOn(usersRepository, 'create').mockImplementation(() => mockUser);
+      jest.spyOn(usersRepository, 'save').mockResolvedValueOnce(mockUser);
+      jest.spyOn(jwtService, 'signAsync').mockResolvedValueOnce('test-token');
+
+      const result = await authService.handleGoogleLogin(mockGoogleProfile);
+
+      expect(usersRepository.create).toHaveBeenCalledWith({
+        email: mockGoogleProfile.email,
+        username: mockGoogleProfile.username,
+        googleId: mockGoogleProfile.googleId,
+        profilePicture: mockGoogleProfile.picture,
+        role: mockRole,
+        acceptedTerms: true,
+        acceptedPrivacyPolicy: true,
+        isActive: true,
+      });
+      expect(result).toEqual({
+        accessToken: 'test-token',
+        user: mockUser,
+      });
+    });
+
+    it('should update existing user if role is missing', async () => {
+      const mockRole = { id: 1, name: 'User' } as Role;
+      const existingUser = {
+        id: '1',
+        email: mockGoogleProfile.email,
+        googleId: mockGoogleProfile.googleId,
+        role: undefined,
+        profilePicture: 'old-picture.jpg',
+        isActive: true,
+        acceptedTerms: true,
+        acceptedPrivacyPolicy: true,
+        createdAt: new Date(),
+      } as Partial<User>;
+
+      const updatedUser = {
+        ...existingUser,
+        role: mockRole,
+        profilePicture: mockGoogleProfile.picture,
+      } as User;
+
+      jest
+        .spyOn(usersRepository, 'findOne')
+        .mockResolvedValueOnce(existingUser as User)
+        .mockResolvedValueOnce(updatedUser);
+
+      jest
+        .spyOn(usersRepository, 'update')
+        .mockResolvedValueOnce({ affected: 1 } as any);
+
+      jest.spyOn(jwtService, 'signAsync').mockResolvedValueOnce('test-token');
+
+      const result = await authService.handleGoogleLogin(mockGoogleProfile);
+
+      expect(usersRepository.update).toHaveBeenCalledWith(existingUser.id, {
+        role: mockRole,
+        profilePicture: mockGoogleProfile.picture,
+      });
+      expect(result).toEqual({
+        accessToken: 'test-token',
+        user: updatedUser,
+      });
+    });
+
+    it('should throw InternalServerErrorException if default role not found', async () => {
+      jest.spyOn(rolesRepository, 'findOne').mockResolvedValueOnce(null);
+
+      await expect(
+        authService.handleGoogleLogin(mockGoogleProfile),
+      ).rejects.toThrow(InternalServerErrorException);
     });
   });
 });

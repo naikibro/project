@@ -1,21 +1,22 @@
-import { useState } from "react";
-import {
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  TextField,
-  DialogActions,
-  Button,
-  Box,
-  IconButton,
-  Avatar,
-  Typography,
-  Divider,
-  InputAdornment,
-} from "@mui/material";
 import { Close as CloseIcon, Lock as LockIcon } from "@mui/icons-material";
-import { UserDto } from "src/models/User.model";
+import {
+  Avatar,
+  Box,
+  Button,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  Divider,
+  IconButton,
+  InputAdornment,
+  TextField,
+  Typography,
+} from "@mui/material";
+import { useState, useEffect, useRef } from "react";
 import toast from "react-hot-toast";
+import { UserDto } from "src/models/User.model";
+import { useAuthStore } from "src/store/useAuthStore";
 
 interface ProfileEditDialogProps {
   open: boolean;
@@ -24,32 +25,39 @@ interface ProfileEditDialogProps {
 }
 
 const ProfileEditDialog = ({ open, user, onClose }: ProfileEditDialogProps) => {
+  const { getUser } = useAuthStore();
   const [username, setUsername] = useState(user.username);
+  const usernameInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (open) {
+      setTimeout(() => {
+        usernameInputRef.current?.focus();
+      }, 100);
+    }
+  }, [open]);
 
   const handleUpdate = async () => {
     if (!user) return;
     try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/users/${user.username}`,
-        {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({ username }),
-        }
-      );
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/me`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ username }),
+      });
       if (!res.ok) {
         throw new Error("Failed to update user");
       }
       toast.success("User updated successfully!");
       onClose();
+      await getUser();
     } catch (error) {
       toast.error("Error updating user.");
       console.error("Error updating user:", error);
     }
   };
 
-  // Generate user avatar or placeholder
   const getInitials = (username: string) => {
     return username ? username.charAt(0).toUpperCase() : "U";
   };
@@ -68,6 +76,7 @@ const ProfileEditDialog = ({ open, user, onClose }: ProfileEditDialogProps) => {
       }}
     >
       <DialogTitle
+        component="div"
         sx={{
           bgcolor: "primary.main",
           color: "white",
@@ -77,7 +86,9 @@ const ProfileEditDialog = ({ open, user, onClose }: ProfileEditDialogProps) => {
           alignItems: "center",
         }}
       >
-        <Typography variant="h6">Edit Profile</Typography>
+        <Typography component="h2" variant="h6">
+          Edit Profile
+        </Typography>
         <IconButton
           onClick={onClose}
           sx={{ color: "white" }}
@@ -101,36 +112,45 @@ const ProfileEditDialog = ({ open, user, onClose }: ProfileEditDialogProps) => {
 
         <Divider sx={{ mb: 3 }} />
 
-        <TextField
-          label="Username"
-          fullWidth
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-          variant="outlined"
-          margin="normal"
-          InputProps={{
-            sx: { borderRadius: 1.5 },
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleUpdate();
           }}
-        />
+        >
+          <TextField
+            inputRef={usernameInputRef}
+            label="Username"
+            fullWidth
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            variant="outlined"
+            margin="normal"
+            InputProps={{
+              sx: { borderRadius: 1.5 },
+            }}
+          />
 
-        <TextField
-          label="Email"
-          fullWidth
-          value={user.email}
-          variant="outlined"
-          margin="normal"
-          disabled
-          helperText="Email cannot be changed"
-          InputProps={{
-            readOnly: true,
-            sx: { borderRadius: 1.5, bgcolor: "rgba(0, 0, 0, 0.03)" },
-            endAdornment: (
-              <InputAdornment position="end">
-                <LockIcon color="action" fontSize="small" />
-              </InputAdornment>
-            ),
-          }}
-        />
+          <TextField
+            label="Email"
+            fullWidth
+            value={user.email}
+            variant="outlined"
+            margin="normal"
+            disabled
+            helperText="Email cannot be changed"
+            InputProps={{
+              readOnly: true,
+              sx: { borderRadius: 1.5, bgcolor: "rgba(0, 0, 0, 0.03)" },
+              endAdornment: (
+                <InputAdornment position="end">
+                  <LockIcon color="action" fontSize="small" />
+                </InputAdornment>
+              ),
+            }}
+          />
+          <input type="submit" style={{ display: "none" }} />
+        </form>
       </DialogContent>
 
       <DialogActions sx={{ px: 3, pb: 3, pt: 1 }}>

@@ -1,21 +1,72 @@
 import {
   Body,
   Controller,
+  Get,
   HttpCode,
   HttpStatus,
   Post,
+  Req,
   Res,
+  UseGuards,
 } from '@nestjs/common';
 import { ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Response } from 'express';
 import { AuthService } from './auth.service';
 import { SignInDto } from './dto/sign-in.dto';
 import { SignUpDto } from './dto/sign-up.dto';
+import { GoogleOauthGuard } from './google/google-oauth.guard';
+import { User } from '../users/users.entity';
 
 @ApiTags('Authentication')
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
+
+  @Get('google')
+  @UseGuards(GoogleOauthGuard)
+  @ApiOperation({
+    summary: 'Initiate Google OAuth',
+    description: 'Redirects to Google OAuth consent screen for authentication',
+  })
+  @ApiResponse({
+    status: 302,
+    description: 'Redirects to Google OAuth consent screen',
+  })
+  async googleAuth() {
+    return Promise.resolve({ message: 'Google authentication initiated' });
+  }
+
+  @Get('google/callback')
+  @UseGuards(GoogleOauthGuard)
+  @ApiOperation({
+    summary: 'Google OAuth callback',
+    description:
+      'Handles the OAuth callback from Google, sets access token cookie and redirects to frontend',
+  })
+  @ApiResponse({
+    status: 302,
+    description: 'Redirects to frontend with access token cookie set',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - Invalid or expired OAuth token',
+  })
+  async googleAuthRedirect(@Req() req: { user: User }, @Res() res: Response) {
+    const { accessToken } = await this.authService.handleGoogleLogin({
+      email: req.user.email,
+      googleId: req.user.googleId ?? '',
+      username: req.user.username ?? '',
+      picture: req.user.profilePicture ?? '',
+    });
+
+    res.cookie('access_token', accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+    });
+
+    res.redirect('http://localhost:3000');
+  }
 
   @Post('signup')
   @HttpCode(HttpStatus.CREATED)

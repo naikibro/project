@@ -1,19 +1,26 @@
 import {
-  Injectable,
-  UnauthorizedException,
   BadRequestException,
-  NotFoundException,
   ConflictException,
+  Injectable,
   InternalServerErrorException,
+  NotFoundException,
+  UnauthorizedException,
 } from '@nestjs/common';
-import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
+import * as bcrypt from 'bcrypt';
 import { Repository } from 'typeorm';
-import { SignUpDto } from './dto/sign-up.dto';
-import { SignInDto } from './dto/sign-in.dto';
 import { User } from '../users/users.entity';
+import { SignInDto } from './dto/sign-in.dto';
+import { SignUpDto } from './dto/sign-up.dto';
 import { Role } from './rbac/role/role.entity';
+
+interface GoogleProfile {
+  email: string;
+  googleId: string;
+  username: string;
+  picture: string;
+}
 
 @Injectable()
 export class AuthService {
@@ -126,12 +133,79 @@ export class AuthService {
     if (!user) {
       throw new NotFoundException('User not found');
     }
-
-    // TODO : later : Send email with password reset link
   }
 
   resetPassword(token: string, newPassword: string) {
-    // TODO : later : Implement password reset
     return { token, newPassword };
+  }
+
+  /**
+   * Handles Google OAuth login flow
+   * @param profile - Google profile information containing email, googleId, username and picture
+   * @returns Promise containing access token and user information
+   * @throws InternalServerErrorException if default role is not found
+   */
+  async handleGoogleLogin(
+    profile: GoogleProfile,
+  ): Promise<{ accessToken: string; user: User }> {
+    const { email, googleId, username, picture } = profile;
+
+    const defaultRole = await this.rolesRepository.findOne({
+      where: { name: 'User' },
+    });
+
+    if (!defaultRole) {
+      throw new InternalServerErrorException('Default role not found');
+    }
+
+    let user = await this.usersRepository.findOne({
+      where: [{ email }, { googleId }],
+      relations: ['role'],
+    });
+
+    if (!user) {
+      user = this.usersRepository.create({
+        email,
+        username: username || email.split('@')[0],
+        googleId,
+        profilePicture: picture,
+        role: defaultRole,
+        acceptedTerms: true,
+        acceptedPrivacyPolicy: true,
+        isActive: true,
+      });
+      await this.usersRepository.save(user);
+    } else {
+      const updates: Partial<User> = {
+        role: user.role || defaultRole,
+      };
+
+      if (picture && user.profilePicture !== picture) {
+        updates.profilePicture = picture;
+      }
+
+      if (googleId && user.googleId !== googleId) {
+        updates.googleId = googleId;
+      }
+
+      if (Object.keys(updates).length > 0) {
+        await this.usersRepository.update(user.id, updates);
+        user = (await this.usersRepository.findOne({
+          where: { id: user.id },
+          relations: ['role'],
+        })) as User;
+      }
+    }
+
+    if (!user || !user.id) {
+      throw new InternalServerErrorException('Failed to create or update user');
+    }
+
+    const accessToken = await this.jwtService.signAsync({
+      userId: user.id,
+      role: user.role.name,
+    });
+
+    return { accessToken, user };
   }
 }

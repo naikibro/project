@@ -11,6 +11,7 @@ import { User } from 'src/users/users.entity';
 import { Role } from './rbac/role/role.entity';
 import { JwtAuthGuard } from './jwt/jwt.guard';
 import { JwtStrategy } from './jwt/jwt.strategy';
+import { GoogleStrategy } from './google/google.strategy.oauth';
 
 dotenv.config();
 
@@ -26,7 +27,7 @@ dotenv.config();
     }),
     TypeOrmModule.forFeature([User, Role]),
   ],
-  providers: [AuthService, JwtStrategy, JwtAuthGuard],
+  providers: [AuthService, JwtStrategy, JwtAuthGuard, GoogleStrategy],
   controllers: [AuthController],
   exports: [AuthService, JwtAuthGuard, TypeOrmModule],
 })

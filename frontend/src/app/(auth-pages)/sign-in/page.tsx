@@ -8,12 +8,14 @@ import {
   Paper,
   TextField,
   Typography,
+  Divider,
 } from "@mui/material";
 import Image from "next/image";
 import logo from "public/images/logo-full-black.png";
 import React, { useEffect, useState } from "react";
 import toast, { Toaster } from "react-hot-toast";
 import { useAuthStore } from "src/store/useAuthStore";
+import GoogleIcon from "@mui/icons-material/Google";
 
 const SignInPage: React.FC = () => {
   const [form, setForm] = useState({ email: "", password: "" });
@@ -49,6 +51,10 @@ const SignInPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleGoogleSignIn = () => {
+    window.location.href = `${process.env.NEXT_PUBLIC_API_URL}/auth/google`;
   };
 
   return (
@@ -105,6 +111,29 @@ const SignInPage: React.FC = () => {
                 ),
               }}
             />
+
+            <Button
+              type="submit"
+              fullWidth
+              variant="contained"
+              color="primary"
+              sx={{ mt: 3 }}
+              disabled={loading}
+            >
+              {loading ? "Signing In..." : "Sign In"}
+            </Button>
+
+            <Divider sx={{ my: 3 }}>OR</Divider>
+
+            <Button
+              fullWidth
+              variant="outlined"
+              startIcon={<GoogleIcon />}
+              onClick={handleGoogleSignIn}
+              sx={{ mb: 2 }}
+            >
+              Sign in with Google
+            </Button>
 
             <Typography
               variant="caption"

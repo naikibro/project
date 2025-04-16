@@ -47,7 +47,7 @@ const ConfirmDeleteDialog = ({
           alignItems: "center",
         }}
       >
-        <Typography variant="h6">Confirm Account Deletion</Typography>
+        <Typography component="div">Confirm Account Deletion</Typography>
         <IconButton
           onClick={onClose}
           sx={{ color: "white" }}

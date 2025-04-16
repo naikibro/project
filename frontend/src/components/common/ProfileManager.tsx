@@ -97,8 +97,9 @@ const ProfileManager = ({ user, onDelete }: ProfileManagerProps) => {
                 bgcolor: getAvatarColor(user.username),
                 boxShadow: "0 4px 20px rgba(0,0,0,0.1)",
               }}
+              src={user.profilePicture}
             >
-              {getInitials(user.username)}
+              {user.profilePicture ? null : getInitials(user.username)}
             </Avatar>
           </Grid>
 
@@ -182,6 +183,7 @@ const ProfileManager = ({ user, onDelete }: ProfileManagerProps) => {
             onClick={() => setDeleteOpen(true)}
             fullWidth={isMobile}
             sx={{
+              visibility: user.role?.name === "Admin" ? "hidden" : "visible",
               py: 1.5,
               px: 3,
               borderRadius: 2,
@@ -202,11 +204,13 @@ const ProfileManager = ({ user, onDelete }: ProfileManagerProps) => {
       />
 
       {/* Confirm Delete Dialog */}
-      <ConfirmDeleteDialog
-        open={deleteOpen}
-        onClose={() => setDeleteOpen(false)}
-        onConfirm={handleDelete}
-      />
+      {user.role?.name !== "Admin" && (
+        <ConfirmDeleteDialog
+          open={deleteOpen}
+          onClose={() => setDeleteOpen(false)}
+          onConfirm={handleDelete}
+        />
+      )}
     </Container>
   );
 };

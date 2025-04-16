@@ -88,7 +88,10 @@ export default function Dashboard() {
         {selectedTab === 0 && (
           <ProfileManager
             user={user}
-            onDelete={() => setDeleteDialogOpen(true)}
+            onDelete={() => {
+              setDeleteDialogOpen(true);
+              handleDelete();
+            }}
           />
         )}
 

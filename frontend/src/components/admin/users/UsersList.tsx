@@ -1,10 +1,5 @@
 import {
   Button,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogContentText,
-  DialogTitle,
   Paper,
   Table,
   TableBody,
@@ -17,6 +12,7 @@ import { useState } from "react";
 import toast from "react-hot-toast";
 import { UserDto } from "src/models/User.model";
 import UpdateUserDialog from "./UpdateUserDialog";
+import ConfirmDeleteDialog from "../../common/ConfirmDeleteDialog";
 
 interface UsersListProps {
   users: UserDto[];
@@ -121,17 +117,19 @@ const UsersList: React.FC<UsersListProps> = ({ users, fetchUsers }) => {
                     Update
                   </Button>
 
-                  <Button
-                    variant="contained"
-                    color="error"
-                    size="small"
-                    onClick={() => {
-                      setSelectedUser(user);
-                      setDeleteDialogOpen(true);
-                    }}
-                  >
-                    Delete
-                  </Button>
+                  {user.role?.name !== "Admin" && (
+                    <Button
+                      variant="contained"
+                      color="error"
+                      size="small"
+                      onClick={() => {
+                        setSelectedUser(user);
+                        setDeleteDialogOpen(true);
+                      }}
+                    >
+                      Delete
+                    </Button>
+                  )}
                 </TableCell>
               </TableRow>
             ))}
@@ -151,25 +149,11 @@ const UsersList: React.FC<UsersListProps> = ({ users, fetchUsers }) => {
       />
 
       {/* Delete Confirmation Dialog */}
-      <Dialog
+      <ConfirmDeleteDialog
         open={deleteDialogOpen}
         onClose={() => setDeleteDialogOpen(false)}
-      >
-        <DialogTitle>Confirm Deletion</DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            Are you sure you want to delete this user?
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDeleteDialogOpen(false)} color="secondary">
-            Cancel
-          </Button>
-          <Button onClick={handleDelete} color="error">
-            Delete
-          </Button>
-        </DialogActions>
-      </Dialog>
+        onConfirm={handleDelete}
+      />
     </>
   );
 };
