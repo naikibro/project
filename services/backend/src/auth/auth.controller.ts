@@ -189,6 +189,14 @@ export class AuthController {
       },
     },
   })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        email: { type: 'string' },
+      },
+    },
+  })
   async forgotPassword(@Body('email') email: string) {
     await this.authService.forgotPassword(email);
     return {
@@ -237,11 +245,14 @@ export class AuthController {
       },
     },
   })
-  resetPassword(
+  async resetPassword(
     @Body('token') token: string,
     @Body('newPassword') newPassword: string,
   ) {
-    return this.authService.resetPassword(token, newPassword);
+    await this.authService.resetPassword(token, newPassword);
+    return {
+      message: 'Password has been successfully reset',
+    };
   }
 
   @Post('logout')

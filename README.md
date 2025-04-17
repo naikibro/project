@@ -8,6 +8,13 @@
 - Postgres
 - RabbitMQ
 
+# Features
+
+- Microservice architecture
+- Message broker between microservices
+- Auth ( Credentials and Oauth2 strategies )
+- NextJs frontend
+
 ## Architecture overview
 
 ```mermaid

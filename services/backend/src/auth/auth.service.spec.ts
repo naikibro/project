@@ -1,11 +1,6 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 /* eslint-disable @typescript-eslint/unbound-method */
-import { Test, TestingModule } from '@nestjs/testing';
-import { AuthService } from './auth.service';
-import { JwtService } from '@nestjs/jwt';
-import { Repository } from 'typeorm';
-import { getRepositoryToken } from '@nestjs/typeorm';
-import * as bcrypt from 'bcrypt';
 import {
   BadRequestException,
   ConflictException,
@@ -13,19 +8,30 @@ import {
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { SignUpDto } from './dto/sign-up.dto';
-import { SignInDto } from './dto/sign-in.dto';
+import { JwtService } from '@nestjs/jwt';
+import { Test, TestingModule } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
+import * as bcrypt from 'bcrypt';
+import { Repository } from 'typeorm';
 import { User } from '../users/users.entity';
-import { Role } from './rbac/role/role.entity';
 import { idOf } from '../utils/test/test.utils';
+import { AuthService } from './auth.service';
+import { SignInDto } from './dto/sign-in.dto';
+import { SignUpDto } from './dto/sign-up.dto';
+import { Role } from './rbac/role/role.entity';
 
 describe('AuthService', () => {
   let authService: AuthService;
   let usersRepository: Repository<User>;
   let rolesRepository: Repository<Role>;
   let jwtService: JwtService;
+  let clientProxy: { emit: jest.Mock };
 
   beforeEach(async () => {
+    clientProxy = {
+      emit: jest.fn().mockReturnValue(undefined),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AuthService,
@@ -49,6 +55,10 @@ describe('AuthService', () => {
           useValue: {
             signAsync: jest.fn().mockResolvedValue('mock-jwt-token'),
           },
+        },
+        {
+          provide: 'MAILER_SERVICE',
+          useValue: clientProxy,
         },
       ],
     }).compile();
@@ -227,22 +237,87 @@ describe('AuthService', () => {
     });
 
     it('should not throw an error if user exists', async () => {
-      jest.spyOn(usersRepository, 'findOne').mockResolvedValueOnce(new User());
+      const mockUser = {
+        id: idOf('testuser1'),
+        email: 'test@example.com',
+      } as User;
+
+      jest.spyOn(usersRepository, 'findOne').mockResolvedValueOnce(mockUser);
+      jest
+        .spyOn(usersRepository, 'update')
+        .mockResolvedValueOnce({ affected: 1 } as any);
 
       await expect(
         authService.forgotPassword('test@example.com'),
       ).resolves.toBeUndefined();
+
+      expect(clientProxy.emit).toHaveBeenCalledWith(
+        'sendEmail',
+        expect.objectContaining({
+          to: 'test@example.com',
+          subject: 'Password Reset Request',
+        }),
+      );
     });
   });
 
   describe('resetPassword', () => {
-    it('should return the provided token and new password', () => {
-      const result = authService.resetPassword('test-token', 'newPassword123');
+    it('should successfully reset the password', async () => {
+      const mockUser = {
+        id: idOf('testuser1'),
+        email: 'test@example.com',
+        passwordResetToken: 'test-token',
+        passwordResetExpires: new Date(Date.now() + 3600000), // 1 hour from now
+      } as User;
 
-      expect(result).toEqual({
-        token: 'test-token',
-        newPassword: 'newPassword123',
+      jest.spyOn(usersRepository, 'findOne').mockResolvedValueOnce(mockUser);
+      jest
+        .spyOn(usersRepository, 'update')
+        .mockResolvedValueOnce({ affected: 1 } as any);
+
+      await authService.resetPassword('test-token', 'newPassword123');
+
+      expect(usersRepository.findOne).toHaveBeenCalledWith({
+        where: {
+          passwordResetToken: 'test-token',
+          passwordResetExpires: expect.any(Object),
+        },
       });
+
+      expect(usersRepository.update).toHaveBeenCalledWith(
+        mockUser.id,
+        expect.objectContaining({
+          password: expect.any(String),
+          passwordResetToken: undefined,
+          passwordResetExpires: undefined,
+        }),
+      );
+
+      expect(clientProxy.emit).toHaveBeenCalledWith(
+        'sendEmail',
+        expect.objectContaining({
+          to: mockUser.email,
+          subject: 'Password Reset Successful',
+        }),
+      );
+    });
+
+    it('should throw BadRequestException if token is invalid', async () => {
+      jest.spyOn(usersRepository, 'findOne').mockResolvedValueOnce(null);
+
+      await expect(
+        authService.resetPassword('invalid-token', 'newPassword123'),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should throw BadRequestException if token is expired', async () => {
+      jest.spyOn(usersRepository, 'findOne').mockResolvedValueOnce(null);
+
+      await expect(
+        authService.resetPassword('test-token', 'newPassword123'),
+      ).rejects.toThrow(BadRequestException);
+
+      expect(clientProxy.emit).not.toHaveBeenCalled();
     });
   });
 

@@ -69,6 +69,8 @@ describe('AuthController', () => {
           acceptedPrivacyPolicy: false,
           createdAt: new Date(),
           role: { id: 0, name: 'User', claims: [], users: [] },
+          passwordResetToken: '',
+          passwordResetExpires: new Date(),
         };
 
         const mockToken = { accessToken: 'jwt-token', user: mockUser };

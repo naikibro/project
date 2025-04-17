@@ -15,7 +15,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import logo from "public/images/logo-full-black.png";
 import React, { useState } from "react";
-import toast, { Toaster } from "react-hot-toast";
+import toast from "react-hot-toast";
 import { useAuthStore } from "src/store/useAuthStore";
 
 const SignUpPage: React.FC = () => {
@@ -96,7 +96,6 @@ const SignUpPage: React.FC = () => {
         padding: 2,
       }}
     >
-      <Toaster position="bottom-right" />
       <Box
         sx={{
           display: "flex",

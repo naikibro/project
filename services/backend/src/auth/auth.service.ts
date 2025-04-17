@@ -1,15 +1,18 @@
 import {
   BadRequestException,
   ConflictException,
+  Inject,
   Injectable,
   InternalServerErrorException,
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { ClientProxy } from '@nestjs/microservices';
 import { InjectRepository } from '@nestjs/typeorm';
 import * as bcrypt from 'bcrypt';
-import { Repository } from 'typeorm';
+import { randomBytes } from 'crypto';
+import { MoreThan, Repository } from 'typeorm';
 import { User } from '../users/users.entity';
 import { SignInDto } from './dto/sign-in.dto';
 import { SignUpDto } from './dto/sign-up.dto';
@@ -32,6 +35,9 @@ export class AuthService {
     private rolesRepository: Repository<Role>,
 
     private jwtService: JwtService,
+
+    @Inject('MAILER_SERVICE')
+    private clientProxy: ClientProxy,
   ) {}
 
   async signUp(signUpDto: SignUpDto): Promise<{ accessToken: string }> {
@@ -130,13 +136,52 @@ export class AuthService {
     const user: User | null = await this.usersRepository.findOne({
       where: { email },
     });
+
     if (!user) {
       throw new NotFoundException('User not found');
     }
+
+    const resetToken = randomBytes(32).toString('hex');
+    const tokenExpiry = new Date();
+    tokenExpiry.setHours(tokenExpiry.getHours() + 1);
+
+    await this.usersRepository.update(user.id, {
+      passwordResetToken: resetToken,
+      passwordResetExpires: tokenExpiry,
+    });
+
+    this.clientProxy.emit('sendEmail', {
+      to: user.email,
+      subject: 'Password Reset Request',
+      text: `To reset your password, click the following link: ${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`,
+    });
   }
 
-  resetPassword(token: string, newPassword: string) {
-    return { token, newPassword };
+  async resetPassword(token: string, newPassword: string): Promise<void> {
+    const user = await this.usersRepository.findOne({
+      where: {
+        passwordResetToken: token,
+        passwordResetExpires: MoreThan(new Date()),
+      },
+    });
+
+    if (!user) {
+      throw new BadRequestException('Invalid or expired password reset token');
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    await this.usersRepository.update(user.id, {
+      password: hashedPassword,
+      passwordResetToken: undefined,
+      passwordResetExpires: undefined,
+    });
+
+    this.clientProxy.emit('sendEmail', {
+      to: user.email,
+      subject: 'Password Reset Successful',
+      text: 'Your password has been successfully reset. If you did not perform this action, please contact support immediately.',
+    });
   }
 
   /**

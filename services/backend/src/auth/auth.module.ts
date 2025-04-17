@@ -12,6 +12,7 @@ import { Role } from './rbac/role/role.entity';
 import { JwtAuthGuard } from './jwt/jwt.guard';
 import { JwtStrategy } from './jwt/jwt.strategy';
 import { GoogleStrategy } from './google/google.strategy.oauth';
+import { ClientsModule, Transport } from '@nestjs/microservices';
 
 dotenv.config();
 
@@ -26,6 +27,17 @@ dotenv.config();
       signOptions: { expiresIn: '1h' },
     }),
     TypeOrmModule.forFeature([User, Role]),
+    ClientsModule.register([
+      {
+        name: 'MAILER_SERVICE',
+        transport: Transport.RMQ,
+        options: {
+          urls: [process.env.RABBITMQ_URL || 'amqp://localhost:5672'],
+          queue: 'mailer-service',
+          queueOptions: { durable: false },
+        },
+      },
+    ]),
   ],
   providers: [AuthService, JwtStrategy, JwtAuthGuard, GoogleStrategy],
   controllers: [AuthController],

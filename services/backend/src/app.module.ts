@@ -9,7 +9,8 @@ import { ConfigModule } from '@nestjs/config';
 import { DatabaseModule } from './database/database.module';
 import { UsersModule } from './users/users.module';
 import { HealthModule } from './health/health.module';
-
+import { MailerModule } from './mailer/mailer.module';
+import { ClientsModule, Transport } from '@nestjs/microservices';
 const isTest = process.env.NODE_ENV === 'test';
 
 @Module({
@@ -22,6 +23,20 @@ const isTest = process.env.NODE_ENV === 'test';
     AuthModule,
     UsersModule,
     HealthModule,
+    MailerModule,
+    ClientsModule.register([
+      {
+        name: 'BACKEND_SERVICE',
+        transport: Transport.RMQ,
+        options: {
+          urls: [process.env.RABBITMQ_URL || 'amqp://localhost:5672'],
+          queue: 'backend-service',
+          queueOptions: {
+            durable: false,
+          },
+        },
+      },
+    ]),
   ],
   controllers: [AppController],
   providers: [AppService],

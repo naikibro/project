@@ -9,6 +9,7 @@ const mockUsers = [
 
 beforeEach(() => {
   jest.clearAllMocks();
+  jest.spyOn(console, "error").mockImplementation(() => {});
 
   // Ensure fetch is defined before mocking
   if (!global.fetch) {

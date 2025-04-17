@@ -1,21 +1,21 @@
 "use client";
 import { Visibility, VisibilityOff } from "@mui/icons-material";
+import GoogleIcon from "@mui/icons-material/Google";
 import {
   Box,
   Button,
+  Divider,
   IconButton,
   Link,
   Paper,
   TextField,
   Typography,
-  Divider,
 } from "@mui/material";
 import Image from "next/image";
 import logo from "public/images/logo-full-black.png";
 import React, { useEffect, useState } from "react";
-import toast, { Toaster } from "react-hot-toast";
+import toast from "react-hot-toast";
 import { useAuthStore } from "src/store/useAuthStore";
-import GoogleIcon from "@mui/icons-material/Google";
 
 const SignInPage: React.FC = () => {
   const [form, setForm] = useState({ email: "", password: "" });
@@ -66,7 +66,6 @@ const SignInPage: React.FC = () => {
         padding: 2,
       }}
     >
-      <Toaster position="bottom-right" />
       <Box
         sx={{
           display: "flex",
@@ -111,6 +110,12 @@ const SignInPage: React.FC = () => {
                 ),
               }}
             />
+
+            <Link href="/reset-password">
+              <Typography variant="caption" align="right">
+                Forgot Password?
+              </Typography>
+            </Link>
 
             <Button
               type="submit"

@@ -41,6 +41,8 @@ describe('UsersService', () => {
     acceptedPrivacyPolicy: false,
     createdAt: new Date(),
     role: mockRole,
+    passwordResetToken: '',
+    passwordResetExpires: new Date(),
   };
 
   beforeEach(async () => {
@@ -85,6 +87,8 @@ describe('UsersService', () => {
         acceptedPrivacyPolicy: false,
         createdAt: new Date(),
         role: mockRole,
+        passwordResetToken: '',
+        passwordResetExpires: new Date(),
       };
 
       jest.spyOn(usersRepository, 'findOne').mockResolvedValue(null);
@@ -113,6 +117,8 @@ describe('UsersService', () => {
         acceptedPrivacyPolicy: false,
         createdAt: new Date(),
         role: mockRole,
+        passwordResetToken: '',
+        passwordResetExpires: new Date(),
       };
 
       await expect(service.createUser(user)).rejects.toThrow(
@@ -131,6 +137,8 @@ describe('UsersService', () => {
         acceptedPrivacyPolicy: false,
         createdAt: new Date(),
         role: mockRole,
+        passwordResetToken: '',
+        passwordResetExpires: new Date(),
       };
 
       (isValidEmail as jest.Mock).mockReturnValue(false);
@@ -159,6 +167,8 @@ describe('UsersService', () => {
         acceptedPrivacyPolicy: false,
         createdAt: new Date(),
         role: mockRole,
+        passwordResetToken: '',
+        passwordResetExpires: new Date(),
       };
 
       jest.spyOn(usersRepository, 'findOne').mockResolvedValue(null);
@@ -183,6 +193,8 @@ describe('UsersService', () => {
         acceptedPrivacyPolicy: false,
         createdAt: new Date(),
         role: mockRole,
+        passwordResetToken: '',
+        passwordResetExpires: new Date(),
       };
 
       jest.spyOn(usersRepository, 'findOne').mockResolvedValue(null);
@@ -204,6 +216,8 @@ describe('UsersService', () => {
         acceptedPrivacyPolicy: false,
         createdAt: new Date(),
         role: mockRole,
+        passwordResetToken: '',
+        passwordResetExpires: new Date(),
       };
 
       jest.spyOn(usersRepository, 'findOne').mockResolvedValue(null);
