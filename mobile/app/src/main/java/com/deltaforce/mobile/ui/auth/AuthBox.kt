@@ -1,9 +1,14 @@
 package com.deltaforce.mobile.ui.auth
 
+import AuthSession
+import AuthSessionInterface
+import DefaultAuthSession
 import android.content.Intent
 import android.util.Log
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -28,8 +33,20 @@ import retrofit2.Callback
 import retrofit2.Response
 
 @Composable
-fun AuthBox(authApiService: AuthApiService = AuthApiService()) {
+fun AuthBox(
+    authApiService: AuthApiService = AuthApiService(),
+    authSession: AuthSessionInterface = AuthSession
+) {
     val context = LocalContext.current
+    var showPasswordRecovery by remember { mutableStateOf(false) }
+
+    if (showPasswordRecovery) {
+        PasswordRecovery(
+            authApiService = authApiService,
+            onBack = { showPasswordRecovery = false }
+        )
+        return
+    }
 
     var isSignIn by remember { mutableStateOf(true) }
     var email by remember { mutableStateOf("") }
@@ -94,11 +111,46 @@ fun AuthBox(authApiService: AuthApiService = AuthApiService()) {
                 onLoadingChange = { loading = it },
                 onErrorMessageChange = { errorMessage = it },
                 authApiService = authApiService,
-                context = context
+                context = context,
+                authSession = authSession
             )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            if (isSignIn) {
+                TextButton(
+                    onClick = { showPasswordRecovery = true },
+                    modifier = Modifier.testTag("ForgotPasswordButton")
+                ) {
+                    Text("Forgot Password?")
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                OutlinedButton(
+                    onClick = {},
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("GoogleSignInButton")
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.AccountCircle,
+                            contentDescription = "Google Icon",
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Sign in with Google")
+                    }
+                }
+            }
         }
     }
 }
+
 @Composable
 fun AuthToggleButtons(isSignIn: Boolean, onToggle: (Boolean) -> Unit) {
     Row(
@@ -203,7 +255,8 @@ fun AuthSubmitButton(
     onLoadingChange: (Boolean) -> Unit,
     onErrorMessageChange: (String) -> Unit,
     authApiService: AuthApiService,
-    context: android.content.Context
+    context: android.content.Context,
+    authSession: AuthSessionInterface,
 ) {
     Button(
         onClick = {
@@ -225,6 +278,7 @@ fun AuthSubmitButton(
                             if (response.isSuccessful) {
                                 val token = response.body()?.accessToken ?: ""
                                 Log.d("Auth", "Login successful, Token: $token")
+                                authSession.setToken(token)
                                 context.startActivity(Intent(context, MapboxActivity::class.java))
                             } else {
                                 val errorBody = response.errorBody()?.string() ?: "Login failed."

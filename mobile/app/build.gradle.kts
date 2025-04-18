@@ -1,4 +1,6 @@
 import java.util.Properties
+import java.io.FileInputStream
+import java.io.File
 
 plugins {
     alias(libs.plugins.android.application)
@@ -6,13 +8,27 @@ plugins {
     alias(libs.plugins.kotlin.compose)
 }
 
-val localProperties = Properties().apply {
-    val localPropertiesFile = rootProject.file("local.properties")
-    if (localPropertiesFile.exists()) {
-        load(localPropertiesFile.inputStream())
+// Function to read .env file
+fun loadEnvProperties(): Properties {
+    val envProperties = Properties()
+    val envFile = rootProject.file(".env")
+    if (envFile.exists()) {
+        envProperties.load(FileInputStream(envFile))
+    } else {
+        throw GradleException("""
+            .env file not found at ${envFile.absolutePath}
+            Please create a .env file with required configuration:
+            MAPBOX_ACCESS_TOKEN=your_token_here
+            API_URL=your_api_url_here
+        """.trimIndent())
     }
+    return envProperties
 }
-val API_URL: String = localProperties.getProperty("API_URL") ?: "http://localhost:4001/"
+
+val envProperties = loadEnvProperties()
+val API_URL: String = envProperties.getProperty("API_URL") ?: "http://localhost:4001/"
+val MAPBOX_ACCESS_TOKEN: String = envProperties.getProperty("MAPBOX_ACCESS_TOKEN") 
+    ?: throw GradleException("MAPBOX_ACCESS_TOKEN is required in .env file")
 
 android {
     namespace = "com.deltaforce.mobile"
@@ -28,6 +44,7 @@ android {
 
         // Add API_URL from local.properties as a BuildConfig field
         buildConfigField("String", "API_URL", "\"$API_URL\"")
+        buildConfigField("String", "MAPBOX_ACCESS_TOKEN", "\"$MAPBOX_ACCESS_TOKEN\"")
     }
 
     buildTypes {
@@ -72,6 +89,14 @@ dependencies {
     implementation(libs.androidx.activity)
     implementation(libs.androidx.espresso.intents)
     implementation(libs.okhttp)
+    implementation(libs.android)
+    implementation(libs.maps.compose)
+    implementation(libs.hilt.android)
+    implementation(libs.play.services.auth)
+    implementation(libs.androidx.credentials)
+    implementation(libs.androidx.credentials.play.services.auth)
+    implementation(libs.googleid)
+
 
     testImplementation(libs.junit)
     testImplementation(libs.junit.jupiter)
@@ -82,12 +107,26 @@ dependencies {
     testImplementation(libs.junit.jupiter)
     testImplementation(libs.mockwebserver)
     testImplementation(libs.mockito.core)
+    testImplementation(libs.mockito.core.v550)
+    testImplementation(libs.mockito.kotlin)
 
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.mockito.android)
-
+    androidTestImplementation(libs.mockito.android.v550)
+    androidTestImplementation(libs.mockito.core.v550)
+    androidTestImplementation(libs.mockito.kotlin)
+    androidTestImplementation(libs.androidx.espresso.intents.v351)
+    androidTestImplementation(libs.hilt.android)
+    androidTestImplementation(libs.android)
+    androidTestImplementation(libs.maps.compose)
+    androidTestImplementation(libs.hilt.android)
+    androidTestImplementation(libs.play.services.auth)
+    androidTestImplementation(libs.androidx.credentials)
+    androidTestImplementation(libs.androidx.credentials.play.services.auth)
+    androidTestImplementation(libs.googleid)
+    
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
 }

@@ -67,10 +67,10 @@ interface AuthApi {
     fun signIn(@Body signInRequest: SignInRequest): Call<SignInResponse>
 
     @POST("auth/forgot-password")
-    fun forgotPassword(@Body forgotPasswordRequest: ForgotPasswordRequest): Call<ForgotPasswordResponse>
+    fun forgotPassword(@Body request: ForgotPasswordRequest): Call<Unit>
 
     @POST("auth/reset-password")
-    fun resetPassword(@Body resetPasswordRequest: ResetPasswordRequest): Call<ResetPasswordResponse>
+    fun resetPassword(@Body request: ResetPasswordRequest): Call<Unit>
 }
 
 class AuthApiService(private val authApi: AuthApi? = null, baseUrl: String = BuildConfig.API_URL) {
@@ -91,13 +91,11 @@ class AuthApiService(private val authApi: AuthApi? = null, baseUrl: String = Bui
         return api.signIn(signInRequest)
     }
 
-    fun forgotPassword(email: String): Call<ForgotPasswordResponse> {
-        val request = ForgotPasswordRequest(email)
+    fun forgotPassword(request: ForgotPasswordRequest): Call<Unit> {
         return api.forgotPassword(request)
     }
 
-    fun resetPassword(token: String, newPassword: String): Call<ResetPasswordResponse> {
-        val request = ResetPasswordRequest(token, newPassword)
+    fun resetPassword(request: ResetPasswordRequest): Call<Unit> {
         return api.resetPassword(request)
     }
 }

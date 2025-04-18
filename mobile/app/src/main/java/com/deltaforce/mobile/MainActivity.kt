@@ -11,19 +11,23 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Scaffold
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.deltaforce.mobile.network.AuthApiService
 import com.deltaforce.mobile.ui.auth.AuthBox
 import com.deltaforce.mobile.ui.theme.SupmapTheme
 
 class MainActivity(private val authSession: AuthSessionInterface = AuthSession) : ComponentActivity() {
+    private lateinit var authApiService: AuthApiService
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        authApiService = AuthApiService()
 
         if (authSession.accessToken != null) {
             startActivity(Intent(this, MapboxActivity::class.java))
@@ -36,7 +40,6 @@ class MainActivity(private val authSession: AuthSessionInterface = AuthSession) 
             SupmapTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
                     WelcomeBox(
-                        authSession=authSession,
                         modifier = Modifier
                             .fillMaxSize()
                             .padding(innerPadding)
@@ -48,7 +51,9 @@ class MainActivity(private val authSession: AuthSessionInterface = AuthSession) 
 }
 
 @Composable
-fun WelcomeBox(authSession: AuthSessionInterface, modifier: Modifier = Modifier) {
+fun WelcomeBox(
+    modifier: Modifier = Modifier
+) {
     val logo: Int = if (isSystemInDarkTheme()) {
         R.drawable.logo_full_black
     } else {
@@ -78,8 +83,7 @@ fun WelcomeBox(authSession: AuthSessionInterface, modifier: Modifier = Modifier)
 fun WelcomeBoxPreview() {
     SupmapTheme {
         WelcomeBox(
-            authSession = TODO(),
-            modifier = TODO()
+            modifier = Modifier
         )
     }
 }
