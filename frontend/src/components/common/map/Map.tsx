@@ -4,7 +4,11 @@ import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { useEffect, useRef } from "react";
 
-export default function Map() {
+interface MapProps {
+  onLoad?: () => void;
+}
+
+export default function Map({ onLoad }: MapProps) {
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
 
@@ -18,6 +22,10 @@ export default function Map() {
       zoom: 12,
     });
 
+    mapRef.current.on("load", () => {
+      onLoad?.();
+    });
+
     const handleResize = () => {
       mapRef.current?.resize();
     };
@@ -27,7 +35,7 @@ export default function Map() {
       mapRef.current?.remove();
       window.removeEventListener("resize", handleResize);
     };
-  });
+  }, [onLoad]);
 
   return (
     <Box sx={{ position: "relative", height: "100%", width: "100%" }}>
