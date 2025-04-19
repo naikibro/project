@@ -3,13 +3,18 @@ import Link from "next/link";
 import NavbarClient from "./NavbarClient";
 import HeaderAuth from "src/components/header-auth";
 import Image from "next/image";
-import logo from "public/images/logo-vertical.png";
+import logo from "public/img/logo-vertical.png";
 
 interface NavbarProps {
   isTransparent?: boolean;
 }
 
-const navLinks = [{ text: "Contact", href: "/contact" }];
+const navLinks = [
+  { text: "Features", href: "/features" },
+  { text: "Pricing", href: "/pricing" },
+  { text: "About", href: "/about" },
+  { text: "Contact", href: "/contact" },
+];
 
 const Navbar = ({ isTransparent = false }: NavbarProps) => {
   return (
