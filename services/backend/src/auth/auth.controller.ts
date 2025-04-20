@@ -65,7 +65,7 @@ export class AuthController {
       sameSite: 'strict',
     });
 
-    res.redirect('http://localhost:3000');
+    res.redirect(`${process.env.FRONTEND_URL}`);
   }
 
   @Post('signup')
