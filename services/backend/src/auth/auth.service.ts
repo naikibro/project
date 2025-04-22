@@ -274,7 +274,6 @@ export class AuthService {
   }
 
   async handleGoogleMobileLogin(idToken: string) {
-    console.log('idToken', idToken);
     try {
       const ticket: LoginTicket = await this.googleClient.verifyIdToken({
         idToken,
