@@ -1,0 +1,74 @@
+name: E2E backend tests
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+jobs:
+  E2E-navigation-service-tests:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:14
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: navigation_test
+        ports:
+          - 5435:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    strategy:
+      matrix:
+        node-version: [22.x]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: services/navigation-service/package-lock.json
+
+      - name: Install dependencies
+        working-directory: services/navigation-service
+        run: npm ci
+
+      - name: Wait for Postgres to be ready
+        run: |
+          until pg_isready -h localhost -p 5435 -U postgres; do
+            echo "Waiting for Postgres..."
+            sleep 2
+          done
+        env:
+          PGPASSWORD: postgres
+
+      - name: Run migrations
+        working-directory: services/navigation-service
+        run: NODE_ENV=test npm run migration:run
+
+      - name: Run tests
+        working-directory: services/navigation-service
+        env:
+          NODE_ENV: test
+          POSTGRES_TEST_URI: postgresql://postgres:postgres@localhost:5435/navigation_test
+          JWT_SECRET: test-secret
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          RABBITMQ_URL: ${{ secrets.RABBITMQ_URL }}
+        run: NODE_ENV=test npm run test:e2e
+
+      - name: Upload test report
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-report-navigation
+          path: services/navigation-service/junit.xml
