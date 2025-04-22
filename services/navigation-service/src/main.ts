@@ -35,17 +35,14 @@ async function bootstrap() {
   app.use(cookieParser());
   app.enableCors({
     origin: (origin, callback) => {
-      // Allow requests with no origin (like mobile apps or curl requests)
       if (!origin) {
         callback(null, true);
         return;
       }
 
-      // Check if the origin is in the allowed list
       if (
         ALLOWED_ORIGINS.some((allowedOrigin) => {
           if (allowedOrigin.includes('*')) {
-            // Handle wildcard patterns
             const pattern = new RegExp(
               '^' + allowedOrigin.replace('*', '.*') + '$',
             );
@@ -95,6 +92,6 @@ async function bootstrap() {
     console.error('Failed to connect to RabbitMQ:', error);
   }
 
-  await app.listen(process.env.PORT ?? 4001);
+  await app.listen(process.env.PORT ?? 4002);
 }
 void bootstrap();
