@@ -29,6 +29,8 @@ val envProperties = loadEnvProperties()
 val API_URL: String = envProperties.getProperty("API_URL") ?: "http://localhost:4001/"
 val MAPBOX_ACCESS_TOKEN: String = envProperties.getProperty("MAPBOX_ACCESS_TOKEN") 
     ?: throw GradleException("MAPBOX_ACCESS_TOKEN is required in .env file")
+val GOOGLE_CLIENT_ID: String = envProperties.getProperty("GOOGLE_CLIENT_ID")
+    ?: throw GradleException("GOOGLE_CLIENT_ID is required in .env file")
 
 android {
     namespace = "com.deltaforce.mobile"
@@ -45,6 +47,12 @@ android {
         // Add API_URL from local.properties as a BuildConfig field
         buildConfigField("String", "API_URL", "\"$API_URL\"")
         buildConfigField("String", "MAPBOX_ACCESS_TOKEN", "\"$MAPBOX_ACCESS_TOKEN\"")
+        buildConfigField("String", "GOOGLE_CLIENT_ID", "\"$GOOGLE_CLIENT_ID\"")
+
+        // Add OAuth redirect scheme
+        setManifestPlaceholders(mapOf(
+            "appAuthRedirectScheme" to "com.deltaforce.mobile"
+        ))
     }
 
     buildTypes {
@@ -96,8 +104,9 @@ dependencies {
     implementation(libs.androidx.credentials)
     implementation(libs.androidx.credentials.play.services.auth)
     implementation(libs.googleid)
-
-
+    implementation(libs.appauth)
+    implementation(libs.play.services.auth.v2070)
+    
     testImplementation(libs.junit)
     testImplementation(libs.junit.jupiter)
     testImplementation(libs.robolectric)

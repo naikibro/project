@@ -19,6 +19,7 @@ import { AuthService } from './auth.service';
 import { SignInDto } from './dto/sign-in.dto';
 import { SignUpDto } from './dto/sign-up.dto';
 import { Role } from './rbac/role/role.entity';
+import { UsersService } from '../users/users.service';
 
 describe('AuthService', () => {
   let authService: AuthService;
@@ -31,6 +32,10 @@ describe('AuthService', () => {
     clientProxy = {
       emit: jest.fn().mockReturnValue(undefined),
     };
+
+    // Mock environment variables
+    process.env.GOOGLE_CLIENT_ID = 'mock-client-id';
+    process.env.GOOGLE_CLIENT_SECRET = 'mock-client-secret';
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -60,6 +65,13 @@ describe('AuthService', () => {
           provide: 'MAILER_SERVICE',
           useValue: clientProxy,
         },
+        {
+          provide: UsersService,
+          useValue: {
+            findByEmail: jest.fn(),
+            create: jest.fn(),
+          },
+        },
       ],
     }).compile();
 
@@ -71,6 +83,9 @@ describe('AuthService', () => {
 
   afterEach(() => {
     jest.clearAllMocks();
+    // Clean up mock environment variables
+    delete process.env.GOOGLE_CLIENT_ID;
+    delete process.env.GOOGLE_CLIENT_SECRET;
   });
 
   it('should be defined', () => {

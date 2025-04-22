@@ -4,7 +4,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -16,10 +15,9 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.deltaforce.mobile.network.AuthApiService
 import com.deltaforce.mobile.network.ForgotPasswordRequest
+import com.deltaforce.mobile.network.ForgotPasswordResponse
 import com.deltaforce.mobile.network.ResetPasswordRequest
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
+import com.deltaforce.mobile.network.ResetPasswordResponse
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
@@ -97,17 +95,17 @@ fun PasswordRecovery(
                         successMessage = ""
 
                         val request = ForgotPasswordRequest(email)
-                        authApiService.forgotPassword(request).enqueue(object : Callback<Unit> {
-                            override fun onResponse(call: Call<Unit>, response: Response<Unit>) {
+                        authApiService.forgotPassword(request).enqueue(object : Callback<ForgotPasswordResponse> {
+                            override fun onResponse(call: Call<ForgotPasswordResponse>, response: Response<ForgotPasswordResponse>) {
                                 loading = false
                                 if (response.isSuccessful) {
-                                    successMessage = "Password reset link sent to your email"
+                                    successMessage = response.body()?.message ?: "Password reset link sent to your email"
                                 } else {
                                     errorMessage = response.errorBody()?.string() ?: "Failed to send reset link"
                                 }
                             }
 
-                            override fun onFailure(call: Call<Unit>, t: Throwable) {
+                            override fun onFailure(call: Call<ForgotPasswordResponse>, t: Throwable) {
                                 loading = false
                                 errorMessage = "Network error: ${t.message}"
                             }
@@ -162,18 +160,18 @@ fun PasswordRecovery(
                         successMessage = ""
 
                         val request = ResetPasswordRequest(token, newPassword)
-                        authApiService.resetPassword(request).enqueue(object : Callback<Unit> {
-                            override fun onResponse(call: Call<Unit>, response: Response<Unit>) {
+                        authApiService.resetPassword(request).enqueue(object : Callback<ResetPasswordResponse> {
+                            override fun onResponse(call: Call<ResetPasswordResponse>, response: Response<ResetPasswordResponse>) {
                                 loading = false
                                 if (response.isSuccessful) {
-                                    successMessage = "Password reset successful"
+                                    successMessage = response.body()?.message ?: "Password reset successful"
                                     onBack()
                                 } else {
                                     errorMessage = response.errorBody()?.string() ?: "Failed to reset password"
                                 }
                             }
 
-                            override fun onFailure(call: Call<Unit>, t: Throwable) {
+                            override fun onFailure(call: Call<ResetPasswordResponse>, t: Throwable) {
                                 loading = false
                                 errorMessage = "Network error: ${t.message}"
                             }

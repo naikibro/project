@@ -13,12 +13,14 @@ import { JwtAuthGuard } from './jwt/jwt.guard';
 import { JwtStrategy } from './jwt/jwt.strategy';
 import { GoogleStrategy } from './google/google.strategy.oauth';
 import { ClientsModule, Transport } from '@nestjs/microservices';
+import { UsersService } from '@/users/users.service';
 
 dotenv.config();
 
 @Module({
   imports: [
     UsersModule,
+    UsersService,
     PassportModule.register({ defaultStrategy: 'jwt' }),
     ConfigModule,
     JwtModule.register({

@@ -6,7 +6,6 @@ interface AuthSessionInterface {
 
 class DefaultAuthSession : AuthSessionInterface {
     override var accessToken: String? = null
-        set
 
     override fun setToken(token: String?) {
         accessToken = token

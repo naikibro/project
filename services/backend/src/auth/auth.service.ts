@@ -1,3 +1,7 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-redundant-type-constituents */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import {
   BadRequestException,
   ConflictException,
@@ -17,6 +21,8 @@ import { User } from '../users/users.entity';
 import { SignInDto } from './dto/sign-in.dto';
 import { SignUpDto } from './dto/sign-up.dto';
 import { Role } from './rbac/role/role.entity';
+import { OAuth2Client, TokenPayload, LoginTicket } from 'google-auth-library';
+import { UsersService } from '../users/users.service';
 
 interface GoogleProfile {
   email: string;
@@ -27,6 +33,8 @@ interface GoogleProfile {
 
 @Injectable()
 export class AuthService {
+  private googleClient: OAuth2Client;
+
   constructor(
     @InjectRepository(User)
     private usersRepository: Repository<User>,
@@ -38,7 +46,19 @@ export class AuthService {
 
     @Inject('MAILER_SERVICE')
     private clientProxy: ClientProxy,
-  ) {}
+
+    private readonly usersService: UsersService,
+  ) {
+    const clientId = process.env.GOOGLE_CLIENT_ID;
+    const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+
+    if (!clientId || !clientSecret) {
+      throw new Error('Google OAuth credentials are not configured');
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
+    this.googleClient = new OAuth2Client(clientId, clientSecret);
+  }
 
   async signUp(signUpDto: SignUpDto): Promise<{ accessToken: string }> {
     const {
@@ -252,5 +272,91 @@ export class AuthService {
     });
 
     return { accessToken, user };
+  }
+
+  async handleGoogleMobileLogin(idToken: string) {
+    console.log('idToken', idToken);
+    try {
+      const ticket: LoginTicket = await this.googleClient.verifyIdToken({
+        idToken,
+        audience: process.env.GOOGLE_CLIENT_ID,
+      });
+
+      const payload: TokenPayload | undefined = ticket.getPayload();
+      if (!payload) {
+        throw new UnauthorizedException('Invalid Google token');
+      }
+
+      const { email, sub: googleId, name: username, picture } = payload;
+      if (!email) {
+        throw new UnauthorizedException('Email not found in Google token');
+      }
+
+      // Find or create user
+      let user: User | null = await this.usersRepository.findOne({
+        where: [{ email }, { googleId }],
+        relations: ['role'],
+      });
+
+      if (!user) {
+        const defaultRole = await this.rolesRepository.findOne({
+          where: { name: 'User' },
+        });
+        if (!defaultRole) {
+          throw new InternalServerErrorException('Default role not found');
+        }
+
+        user = this.usersRepository.create({
+          email,
+          googleId,
+          username: username || email.split('@')[0],
+          profilePicture: picture,
+          role: defaultRole,
+          acceptedTerms: true,
+          acceptedPrivacyPolicy: true,
+          isActive: true,
+        });
+        await this.usersRepository.save(user);
+      } else {
+        // Update user if needed
+        const updates: Partial<User> = {};
+        if (picture && user.profilePicture !== picture) {
+          updates.profilePicture = picture;
+        }
+        if (googleId && user.googleId !== googleId) {
+          updates.googleId = googleId;
+        }
+        if (Object.keys(updates).length > 0) {
+          await this.usersRepository.update(user.id, updates);
+          user = await this.usersRepository.findOne({
+            where: { id: user.id },
+            relations: ['role'],
+          });
+        }
+      }
+
+      if (!user || !user.id) {
+        throw new InternalServerErrorException(
+          'Failed to create or update user',
+        );
+      }
+
+      // Generate JWT token
+      const accessToken = await this.jwtService.signAsync({
+        sub: user.id,
+        email: user.email,
+        role: user.role.name,
+      });
+
+      return {
+        accessToken,
+        user,
+      };
+    } catch (error) {
+      if (error instanceof UnauthorizedException) {
+        throw error;
+      }
+      throw new UnauthorizedException('Invalid Google token');
+    }
   }
 }

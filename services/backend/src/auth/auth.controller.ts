@@ -272,4 +272,22 @@ export class AuthController {
 
     return res.json({ message: 'Logged out successfully' });
   }
+
+  @Post('google/mobile')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Mobile Google Sign-In',
+    description: 'Handles Google Sign-In from mobile app using ID token',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Successfully authenticated with Google',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Invalid Google ID token',
+  })
+  async googleMobileAuth(@Body('idToken') idToken: string) {
+    return this.authService.handleGoogleMobileLogin(idToken);
+  }
 }
