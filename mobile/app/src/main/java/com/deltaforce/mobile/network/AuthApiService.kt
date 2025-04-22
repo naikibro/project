@@ -4,6 +4,7 @@ import retrofit2.Call
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.http.Body
+import retrofit2.http.GET
 import retrofit2.http.POST
 import com.deltaforce.mobile.BuildConfig
 
@@ -33,7 +34,9 @@ data class User(
     val id: String,
     val username: String,
     val email: String,
-    val role: Role
+    val role: Role,
+    val profilePicture: String? = null,
+    val googleId: String? = null
 )
 
 data class SignInResponse(
@@ -55,8 +58,16 @@ data class ResetPasswordRequest(
 )
 
 data class ResetPasswordResponse(
-    val token: String,
-    val newPassword: String
+    val message: String
+)
+
+data class GoogleAuthResponse(
+    val accessToken: String,
+    val user: User
+)
+
+data class GoogleMobileAuthRequest(
+    val idToken: String
 )
 
 interface AuthApi {
@@ -67,10 +78,19 @@ interface AuthApi {
     fun signIn(@Body signInRequest: SignInRequest): Call<SignInResponse>
 
     @POST("auth/forgot-password")
-    fun forgotPassword(@Body request: ForgotPasswordRequest): Call<Unit>
+    fun forgotPassword(@Body request: ForgotPasswordRequest): Call<ForgotPasswordResponse>
 
     @POST("auth/reset-password")
-    fun resetPassword(@Body request: ResetPasswordRequest): Call<Unit>
+    fun resetPassword(@Body request: ResetPasswordRequest): Call<ResetPasswordResponse>
+
+    @GET("auth/google")
+    fun initiateGoogleAuth(): Call<Unit>
+
+    @GET("auth/google/callback")
+    fun handleGoogleAuthCallback(): Call<GoogleAuthResponse>
+
+    @POST("auth/google/mobile")
+    fun handleGoogleMobileAuth(@Body request: GoogleMobileAuthRequest): Call<GoogleAuthResponse>
 }
 
 class AuthApiService(private val authApi: AuthApi? = null, baseUrl: String = BuildConfig.API_URL) {
@@ -91,11 +111,23 @@ class AuthApiService(private val authApi: AuthApi? = null, baseUrl: String = Bui
         return api.signIn(signInRequest)
     }
 
-    fun forgotPassword(request: ForgotPasswordRequest): Call<Unit> {
+    fun forgotPassword(request: ForgotPasswordRequest): Call<ForgotPasswordResponse> {
         return api.forgotPassword(request)
     }
 
-    fun resetPassword(request: ResetPasswordRequest): Call<Unit> {
+    fun resetPassword(request: ResetPasswordRequest): Call<ResetPasswordResponse> {
         return api.resetPassword(request)
+    }
+
+    fun initiateGoogleAuth(): Call<Unit> {
+        return api.initiateGoogleAuth()
+    }
+
+    fun handleGoogleAuthCallback(): Call<GoogleAuthResponse> {
+        return api.handleGoogleAuthCallback()
+    }
+
+    fun handleGoogleMobileAuth(idToken: String): Call<GoogleAuthResponse> {
+        return api.handleGoogleMobileAuth(GoogleMobileAuthRequest(idToken))
     }
 }

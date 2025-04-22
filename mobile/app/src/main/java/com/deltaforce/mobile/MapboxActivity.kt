@@ -17,17 +17,24 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.testTag
+import com.deltaforce.mobile.auth.GoogleAuthHelper
+import com.deltaforce.mobile.network.AuthApiService
 import com.deltaforce.mobile.ui.theme.SupmapTheme
-import com.deltaforce.supmap.ui.navigation.SidebarWithFab
+import com.deltaforce.mobile.ui.navigation.SidebarWithFab
 import com.mapbox.geojson.Point
 import com.mapbox.maps.extension.compose.MapboxMap
 import com.mapbox.maps.extension.compose.animation.viewport.rememberMapViewportState
 import kotlinx.coroutines.launch
 
 class MapboxActivity(private val authSession: AuthSessionInterface = AuthSession) : ComponentActivity() {
+    private lateinit var authApiService: AuthApiService
+    private lateinit var googleAuthHelper: GoogleAuthHelper
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        authApiService = AuthApiService()
+        googleAuthHelper = GoogleAuthHelper(this, authApiService)
 
         if (authSession.accessToken == null) {
             startActivity(Intent(this, MainActivity::class.java))
@@ -50,9 +57,22 @@ class MapboxActivity(private val authSession: AuthSessionInterface = AuthSession
             SupmapTheme {
                 SidebarWithFab(
                     onSignOut = {
-                        authSession.clear()
-                        startActivity(Intent(this@MapboxActivity, MainActivity::class.java))
-                        finish()
+                        scope.launch {
+                            try {
+                                // Sign out from Google if the user was signed in with Google
+                                googleAuthHelper.signOut()
+                                Log.d("MapboxActivity", "Successfully signed out from Google")
+                            } catch (e: Exception) {
+                                Log.e("MapboxActivity", "Error signing out from Google", e)
+                            }
+                            
+                            // Clear the session
+                            authSession.clear()
+                            
+                            // Navigate back to MainActivity
+                            startActivity(Intent(this@MapboxActivity, MainActivity::class.java))
+                            finish()
+                        }
                     },
                     drawerState = drawerState
                 ) {

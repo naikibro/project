@@ -1,4 +1,4 @@
-package com.deltaforce.supmap.ui.navigation
+package com.deltaforce.mobile.ui.navigation
 
 import android.content.Intent
 import android.net.Uri

@@ -2,13 +2,11 @@ package com.deltaforce.mobile.ui.auth
 
 import AuthSession
 import AuthSessionInterface
-import DefaultAuthSession
+import android.content.Context
 import android.content.Intent
 import android.util.Log
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -20,6 +18,9 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.deltaforce.mobile.MapboxActivity
+import com.deltaforce.mobile.auth.GoogleSignInButton
+import com.deltaforce.mobile.auth.GoogleSignInViewModel
+import com.deltaforce.mobile.auth.GoogleAuthHelper
 import com.deltaforce.mobile.network.AuthApiService
 import com.deltaforce.mobile.network.SignInRequest
 import com.deltaforce.mobile.network.SignInResponse
@@ -63,6 +64,18 @@ fun AuthBox(
         if (errorMessage.isNotEmpty()) {
             snackbarHostState.showSnackbar(errorMessage)
         }
+    }
+
+    // Create Google Sign-In ViewModel and helper once
+    val googleAuthHelper = remember { GoogleAuthHelper(context, authApiService) }
+    val googleSignInViewModel = remember { GoogleSignInViewModel(googleAuthHelper) }
+
+    // Handle navigation to MapboxActivity
+    val navigateToMapbox = {
+        val intent = Intent(context, MapboxActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        }
+        context.startActivity(intent)
     }
 
     Scaffold(
@@ -112,7 +125,8 @@ fun AuthBox(
                 onErrorMessageChange = { errorMessage = it },
                 authApiService = authApiService,
                 context = context,
-                authSession = authSession
+                authSession = authSession,
+                onSuccess = navigateToMapbox
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -127,25 +141,21 @@ fun AuthBox(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                OutlinedButton(
-                    onClick = {},
+                GoogleSignInButton(
+                    viewModel = googleSignInViewModel,
+                    onSignInSuccess = { response ->
+                        Log.d("AuthBox", "Google Sign-In successful")
+                        authSession.setToken(response.accessToken)
+                        navigateToMapbox()
+                    },
+                    onSignInError = { error ->
+                        Log.e("AuthBox", "Google Sign-In error: $error")
+                        errorMessage = "Google Sign-In failed: $error"
+                    },
                     modifier = Modifier
                         .fillMaxWidth()
                         .testTag("GoogleSignInButton")
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.AccountCircle,
-                            contentDescription = "Google Icon",
-                            modifier = Modifier.size(24.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Sign in with Google")
-                    }
-                }
+                )
             }
         }
     }
@@ -255,8 +265,9 @@ fun AuthSubmitButton(
     onLoadingChange: (Boolean) -> Unit,
     onErrorMessageChange: (String) -> Unit,
     authApiService: AuthApiService,
-    context: android.content.Context,
+    context: Context,
     authSession: AuthSessionInterface,
+    onSuccess: () -> Unit
 ) {
     Button(
         onClick = {
@@ -279,7 +290,7 @@ fun AuthSubmitButton(
                                 val token = response.body()?.accessToken ?: ""
                                 Log.d("Auth", "Login successful, Token: $token")
                                 authSession.setToken(token)
-                                context.startActivity(Intent(context, MapboxActivity::class.java))
+                                onSuccess()
                             } else {
                                 val errorBody = response.errorBody()?.string() ?: "Login failed."
                                 Log.e("Auth", "Login error: $errorBody")
@@ -302,7 +313,7 @@ fun AuthSubmitButton(
                             if (response.isSuccessful) {
                                 val token = response.body()?.accessToken ?: ""
                                 Log.d("Auth", "Signup successful, Token: $token")
-                                context.startActivity(Intent(context, MapboxActivity::class.java))
+                                onSuccess()
                             } else {
                                 val errorBody = response.errorBody()?.string() ?: "Signup failed."
                                 Log.e("Auth", "Signup error: $errorBody")
