@@ -17,7 +17,6 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
-import com.deltaforce.mobile.MapboxActivity
 import com.deltaforce.mobile.auth.GoogleSignInButton
 import com.deltaforce.mobile.auth.GoogleSignInViewModel
 import com.deltaforce.mobile.auth.GoogleAuthHelper
@@ -35,8 +34,10 @@ import retrofit2.Response
 
 @Composable
 fun AuthBox(
+    modifier: Modifier = Modifier,
     authApiService: AuthApiService = AuthApiService(),
-    authSession: AuthSessionInterface = AuthSession
+    authSession: AuthSessionInterface = AuthSession,
+    onAuthSuccess: () -> Unit = {}
 ) {
     val context = LocalContext.current
     var showPasswordRecovery by remember { mutableStateOf(false) }
@@ -70,19 +71,11 @@ fun AuthBox(
     val googleAuthHelper = remember { GoogleAuthHelper(context, authApiService) }
     val googleSignInViewModel = remember { GoogleSignInViewModel(googleAuthHelper) }
 
-    // Handle navigation to MapboxActivity
-    val navigateToMapbox = {
-        val intent = Intent(context, MapboxActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-        }
-        context.startActivity(intent)
-    }
-
     Scaffold(
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
     ) { innerPadding ->
         Column(
-            modifier = Modifier
+            modifier = modifier
                 .fillMaxWidth()
                 .padding(16.dp)
                 .padding(innerPadding),
@@ -126,7 +119,7 @@ fun AuthBox(
                 authApiService = authApiService,
                 context = context,
                 authSession = authSession,
-                onSuccess = navigateToMapbox
+                onSuccess = onAuthSuccess
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -146,7 +139,7 @@ fun AuthBox(
                     onSignInSuccess = { response ->
                         Log.d("AuthBox", "Google Sign-In successful")
                         authSession.setToken(response.accessToken)
-                        navigateToMapbox()
+                        onAuthSuccess()
                     },
                     onSignInError = { error ->
                         Log.e("AuthBox", "Google Sign-In error: $error")

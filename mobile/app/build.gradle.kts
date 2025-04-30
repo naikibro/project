@@ -1,6 +1,5 @@
 import java.util.Properties
 import java.io.FileInputStream
-import java.io.File
 
 plugins {
     alias(libs.plugins.android.application)
@@ -78,7 +77,6 @@ android {
 }
 
 dependencies {
-
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
@@ -106,14 +104,32 @@ dependencies {
     implementation(libs.googleid)
     implementation(libs.appauth)
     implementation(libs.play.services.auth.v2070)
-    
+    implementation(libs.navigationcore.android)
+    implementation(libs.copilot)
+    implementation(libs.ui.maps)
+    implementation(libs.voice)
+    implementation(libs.tripdata)
+    implementation(libs.ui.components)
+    implementation(libs.play.services.location)
+    implementation(libs.android.v10161)
+    implementation(libs.androidx.ui.text)
+    implementation(libs.androidx.ui.text.android)
+    implementation(libs.androidx.lifecycle.runtime.compose)
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
+
+    // Mapbox dependencies
+    implementation(libs.autofill)
+    implementation(libs.discover)
+    implementation(libs.place.autocomplete)
+    implementation(libs.offline)
+    implementation(libs.mapbox.search.android.v2120beta1)
+    implementation(libs.mapbox.search.android.ui.v2120beta1)
+    implementation(libs.androidx.room.runtime.android)
+
     testImplementation(libs.junit)
     testImplementation(libs.junit.jupiter)
     testImplementation(libs.robolectric)
     testImplementation(libs.ui.test.junit4)
-    testImplementation(libs.junit.jupiter)
-    testImplementation(libs.junit.jupiter)
-    testImplementation(libs.junit.jupiter)
     testImplementation(libs.mockwebserver)
     testImplementation(libs.mockito.core)
     testImplementation(libs.mockito.core.v550)
@@ -130,7 +146,6 @@ dependencies {
     androidTestImplementation(libs.hilt.android)
     androidTestImplementation(libs.android)
     androidTestImplementation(libs.maps.compose)
-    androidTestImplementation(libs.hilt.android)
     androidTestImplementation(libs.play.services.auth)
     androidTestImplementation(libs.androidx.credentials)
     androidTestImplementation(libs.androidx.credentials.play.services.auth)

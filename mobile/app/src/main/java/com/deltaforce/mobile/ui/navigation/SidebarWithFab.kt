@@ -4,10 +4,11 @@ import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
@@ -18,9 +19,14 @@ import kotlinx.coroutines.launch
 @Composable
 fun SidebarWithFab(
     onSignOut: () -> Unit,
+    onSearchClick: () -> Unit,
+    onCenterLocation: () -> Unit,
+    onDebug: () -> Unit,
+    isLocationCentered: Boolean,
     drawerState: DrawerState,
     content: @Composable (PaddingValues) -> Unit
 ) {
+    var isFabExpanded by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
 
@@ -84,15 +90,37 @@ fun SidebarWithFab(
     ) {
         Scaffold(
             floatingActionButton = {
-                FloatingActionButton(
-                    onClick = {
-                        scope.launch { drawerState.open() }
-                    },
-                    modifier = Modifier.testTag("Hamburger")
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    verticalAlignment = Alignment.Bottom
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Menu,
-                        contentDescription = "Open Sidebar"
+                    FloatingActionButton(
+                        onClick = { onCenterLocation(); onDebug() },
+                        modifier = Modifier.testTag("Center Location FAB")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.LocationOn,
+                            contentDescription = ""
+                        )
+                    }
+                    FloatingActionButton(
+                        onClick = {
+                            onSearchClick()
+                        },
+                        modifier = Modifier.testTag("Search FAB")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Search,
+                            contentDescription = "Search a place"
+                        )
+                    }
+                    FabMenu(
+                        isExpanded = isFabExpanded,
+                        onMenuClick = { isFabExpanded = !isFabExpanded },
+                        onSignOutClick = {
+                            isFabExpanded = false
+                            scope.launch { drawerState.open() }
+                        }
                     )
                 }
             },
@@ -115,6 +143,10 @@ fun SidebarWithFabPreviewClosed() {
     MaterialTheme {
         SidebarWithFab(
             onSignOut = { },
+            onSearchClick = { },
+            onDebug = { },
+            onCenterLocation = { },
+            isLocationCentered = false,
             drawerState = rememberDrawerState(DrawerValue.Closed)
         ) { innerPadding ->
             Box(
@@ -134,6 +166,10 @@ fun SidebarWithFabPreviewOpen() {
     MaterialTheme {
         SidebarWithFab(
             onSignOut = { },
+            onSearchClick = { },
+            onDebug = { },
+            onCenterLocation = { },
+            isLocationCentered = false,
             drawerState = rememberDrawerState(DrawerValue.Open)
         ) { innerPadding ->
             Box(
