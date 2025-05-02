@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/unbound-method */
 import { Test, TestingModule } from '@nestjs/testing';
-import { AlertsController } from './alerts.controller';
+import { AlertsGateway } from './alerts.gateway';
 import { AlertsService } from './alerts.service';
 import { Alert } from './entities/alert.entity';
 import { CreateAlertDto } from './dto/create-alert.dto';
@@ -8,7 +8,7 @@ import { UpdateAlertDto } from './dto/update-alert.dto';
 import { AlertType } from './entities/alert.type';
 
 describe('AlertsController', () => {
-  let controller: AlertsController;
+  let controller: AlertsGateway;
   let service: AlertsService;
 
   const mockAlert: Alert = {
@@ -49,7 +49,7 @@ describe('AlertsController', () => {
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      controllers: [AlertsController],
+      controllers: [AlertsGateway],
       providers: [
         {
           provide: AlertsService,
@@ -66,7 +66,7 @@ describe('AlertsController', () => {
       ],
     }).compile();
 
-    controller = module.get<AlertsController>(AlertsController);
+    controller = module.get<AlertsGateway>(AlertsGateway);
     service = module.get<AlertsService>(AlertsService);
   });
 
@@ -84,7 +84,7 @@ describe('AlertsController', () => {
 
   describe('findAll', () => {
     it('should return an array of alerts', async () => {
-      const result = await controller.findAll();
+      const result = await controller.findAllAlerts();
       expect(service.findAll).toHaveBeenCalled();
       expect(result).toEqual([mockAlert]);
     });

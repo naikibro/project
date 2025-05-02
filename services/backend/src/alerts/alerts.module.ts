@@ -1,12 +1,13 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AlertsService } from './alerts.service';
+import { AlertsController } from './alerts.controller';
 import { Alert } from './entities/alert.entity';
-import { AlertsGateway } from './alerts.gateway';
 import { ClientsModule } from '@nestjs/microservices';
 import { Transport } from '@nestjs/microservices';
 
 @Module({
+  controllers: [AlertsController],
   imports: [
     TypeOrmModule.forFeature([Alert]),
     ClientsModule.register([
@@ -21,8 +22,6 @@ import { Transport } from '@nestjs/microservices';
       },
     ]),
   ],
-  controllers: [AlertsGateway],
   providers: [AlertsService],
-  exports: [AlertsService],
 })
 export class AlertsModule {}

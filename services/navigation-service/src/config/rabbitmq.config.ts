@@ -34,7 +34,7 @@ export const navigationRabbitMqMicroserviceOptions: MicroserviceOptions = {
     urls: [process.env.RABBITMQ_URL || 'amqp://localhost:5672'],
     queue: 'navigation-service',
     queueOptions: {
-      durable: false,
+      durable: true,
     },
   },
 };

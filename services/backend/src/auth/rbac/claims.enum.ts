@@ -6,6 +6,12 @@ export enum Claim {
   DELETE_OWN_USER = 'delete:own:user',
   DELETE_ANY_USER = 'delete:any:user',
 
+  // Alerts
+  READ_ANY_ALERT = 'read:any:alert',
+  READ_OWN_ALERT = 'read:own:alert',
+  WRITE_OWN_ALERT = 'write:own:alert',
+  WRITE_ANY_ALERT = 'write:any:alert',
+
   // Universal claims
   OMNISCIENT = 'omniscient',
 }

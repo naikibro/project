@@ -5,7 +5,7 @@ import { CreateAlertDto } from './dto/create-alert.dto';
 import { UpdateAlertDto } from './dto/update-alert.dto';
 
 @Controller()
-export class AlertsController {
+export class AlertsGateway {
   constructor(private readonly alertsService: AlertsService) {}
 
   @MessagePattern('createAlert')
@@ -14,7 +14,7 @@ export class AlertsController {
   }
 
   @MessagePattern('findAllAlerts')
-  findAll() {
+  async findAllAlerts() {
     return this.alertsService.findAll();
   }
 
