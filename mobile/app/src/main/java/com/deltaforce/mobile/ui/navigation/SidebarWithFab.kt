@@ -22,6 +22,7 @@ fun SidebarWithFab(
     onSignOut: () -> Unit,
     onSearchClick: () -> Unit,
     onCenterLocation: () -> Unit,
+    onAlert: () -> Unit,
     onDebug: () -> Unit,
     isLocationCentered: Boolean,
     drawerState: DrawerState,
@@ -105,7 +106,7 @@ fun SidebarWithFab(
                         )
                     }
                     FloatingActionButton(
-                        onClick = { onDebug() },
+                        onClick = { onAlert() },
                         modifier = Modifier.testTag("Alert FAB")
                     ) {
                         Icon(
@@ -154,6 +155,7 @@ fun SidebarWithFabPreviewClosed() {
         SidebarWithFab(
             onSignOut = { },
             onSearchClick = { },
+            onAlert = {/*TODO*/},
             onDebug = { },
             onCenterLocation = { },
             isLocationCentered = false,
@@ -177,6 +179,7 @@ fun SidebarWithFabPreviewOpen() {
         SidebarWithFab(
             onSignOut = { },
             onSearchClick = { },
+            onAlert = {},
             onDebug = { },
             onCenterLocation = { },
             isLocationCentered = false,

@@ -8,6 +8,7 @@ import retrofit2.http.GET
 import retrofit2.http.POST
 import com.deltaforce.mobile.BuildConfig
 
+
 data class SignUpRequest(
     val username: String,
     val email: String,

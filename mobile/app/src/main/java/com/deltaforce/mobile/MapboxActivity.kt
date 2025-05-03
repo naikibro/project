@@ -76,8 +76,10 @@ import com.mapbox.search.SearchEngineSettings
 import com.mapbox.search.ApiType
 import com.mapbox.search.common.CompletionCallback
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import com.deltaforce.mobile.ui.search.SearchBottomSheet
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -100,10 +102,13 @@ import android.content.res.Configuration
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.deltaforce.mobile.ui.navigation.NavigationViewModel
 import androidx.activity.viewModels
+import com.deltaforce.mobile.ui.alerts.CreateAlertModal
+import com.deltaforce.mobile.ui.alerts.AlertData
+import com.deltaforce.mobile.network.AlertService
 
 class MapboxActivity(private val authSession: AuthSessionInterface = AuthSession) : ComponentActivity() {
     // ===== Properties =====
-    
+
     // Authentication
     private lateinit var authApiService: AuthApiService
     private lateinit var googleAuthHelper: GoogleAuthHelper
@@ -132,6 +137,7 @@ class MapboxActivity(private val authSession: AuthSessionInterface = AuthSession
     private val currentRouteProgress = MutableStateFlow<RouteProgress?>(null)
     private val replayer = MapboxReplayer()
     private val navigationViewModel: NavigationViewModel by viewModels()
+    private val isAlertModalVisible = MutableStateFlow(false)
 
     // Navigation Components
     private val tripProgressApi: MapboxTripProgressApi by lazy {
@@ -508,6 +514,7 @@ class MapboxActivity(private val authSession: AuthSessionInterface = AuthSession
 
     // ===== UI Methods =====
 
+    @RequiresApi(Build.VERSION_CODES.O)
     @SuppressLint("MissingPermission")
     private fun setupComposeUI() {
         setContent {
@@ -517,6 +524,7 @@ class MapboxActivity(private val authSession: AuthSessionInterface = AuthSession
             val isNavigatingState = isNavigating.collectAsState()
             val routeProgressState = currentRouteProgress.collectAsState()
             val lifecycleOwner = LocalLifecycleOwner.current
+            val isAlertModalVisibleState = isAlertModalVisible.collectAsState()
 
             setupCoroutineScope(scope)
             setupLifecycleObserver(lifecycleOwner)
@@ -528,6 +536,7 @@ class MapboxActivity(private val authSession: AuthSessionInterface = AuthSession
                         onSignOut = { handleSignOut(scope, context) },
                         onSearchClick = { showDestinationInput() },
                         onCenterLocation = { centerOnCurrentLocation() },
+                        onAlert = { isAlertModalVisible.value = true },
                         onDebug = { Log.d("POSITION", fusedLocationClient.lastLocation.toString()) },
                         isLocationCentered = isLocationCentered.collectAsState().value,
                         drawerState = drawerState
@@ -536,6 +545,18 @@ class MapboxActivity(private val authSession: AuthSessionInterface = AuthSession
                             isNavigatingState = isNavigatingState,
                             routeProgressState = routeProgressState
                         )
+
+                        currentPoint?.let { point ->
+                            CreateAlertModal(
+                                isVisible = isAlertModalVisibleState.value,
+                                currentLocation = point,
+                                onDismiss = { isAlertModalVisible.value = false },
+                                onSubmit = { alertData ->
+                                    handleAlertCreation(alertData)
+                                    isAlertModalVisible.value = false
+                                }
+                            )
+                        }
                     }
                 }
             }
@@ -663,6 +684,33 @@ class MapboxActivity(private val authSession: AuthSessionInterface = AuthSession
                 message = "Could not find a route to this destination. Please try another one.",
                 withDismissAction = true
             )
+        }
+    }
+
+    @RequiresApi(Build.VERSION_CODES.O)
+    private fun handleAlertCreation(alertData: AlertData) {
+        coroutineScope?.launch {
+            try {
+                val alertService = AlertService()
+                val response = withContext(Dispatchers.IO) {
+                    alertService.createAlert(alertData.toAlert()).execute()
+                }
+                
+                if (response.isSuccessful) {
+                    snackbarHostState.showSnackbar(
+                        message = "Alert created successfully",
+                        withDismissAction = true
+                    )
+                } else {
+                    throw Exception("Failed to create alert: ${response.code()}")
+                }
+            } catch (e: Exception) {
+                Log.e("MapboxActivity", "Error creating alert", e)
+                snackbarHostState.showSnackbar(
+                    message = "Failed to create alert. Please try again.",
+                    withDismissAction = true
+                )
+            }
         }
     }
 
