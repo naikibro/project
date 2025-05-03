@@ -102,8 +102,13 @@ import com.deltaforce.mobile.ui.navigation.NavigationViewModel
 import androidx.activity.viewModels
 
 class MapboxActivity(private val authSession: AuthSessionInterface = AuthSession) : ComponentActivity() {
+    // ===== Properties =====
+    
+    // Authentication
     private lateinit var authApiService: AuthApiService
     private lateinit var googleAuthHelper: GoogleAuthHelper
+
+    // Map Components
     private var mapView: MapView? = null
     private var viewportDataSource: MapboxNavigationViewportDataSource? = null
     private var navigationCamera: NavigationCamera? = null
@@ -117,6 +122,8 @@ class MapboxActivity(private val authSession: AuthSessionInterface = AuthSession
     private var destinationPoint: Point? = null
     private var coroutineScope: CoroutineScope? = null
     private var searchEngine: SearchEngine? = null
+
+    // State Management
     private val isBottomSheetVisible = MutableStateFlow(false)
     private val selectedDestination = MutableStateFlow<Point?>(null)
     private val isLocationCentered = MutableStateFlow(false)
@@ -126,6 +133,7 @@ class MapboxActivity(private val authSession: AuthSessionInterface = AuthSession
     private val replayer = MapboxReplayer()
     private val navigationViewModel: NavigationViewModel by viewModels()
 
+    // Navigation Components
     private val tripProgressApi: MapboxTripProgressApi by lazy {
         val distanceFormatterOptions = DistanceFormatterOptions.Builder(this).build()
         val formatter = TripProgressUpdateFormatter.Builder(this)
@@ -136,30 +144,35 @@ class MapboxActivity(private val authSession: AuthSessionInterface = AuthSession
         MapboxTripProgressApi(formatter)
     }
 
-    private val locationPermissionRequest =
-        registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
-            when {
-                permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true -> {
-                    initializeMapComponents()
-                    centerOnCurrentLocation()
-                }
-                else -> {
-                    Log.e("MapboxActivity", "Location permissions denied")
-                }
-            }
-        }
-
+    // ===== Lifecycle Methods =====
 
     @SuppressLint("Lifecycle")
     @RequiresApi(Build.VERSION_CODES.P)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        initializeComponents()
+        setupMapAndNavigation()
+        setupComposeUI()
+    }
 
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        // Switch to overview mode on screen rotation
+        navigationCamera?.requestNavigationCameraToOverview()
+    }
+
+    // ===== Initialization Methods =====
+
+    @RequiresApi(Build.VERSION_CODES.P)
+    private fun initializeComponents() {
         authApiService = AuthApiService()
         googleAuthHelper = GoogleAuthHelper(this, authApiService)
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
+        initializeSearchEngine()
+    }
 
-        // Initialize SearchEngine
+    @RequiresApi(Build.VERSION_CODES.P)
+    private fun initializeSearchEngine() {
         searchEngine = SearchEngine.createSearchEngineWithBuiltInDataProviders(
             ApiType.GEOCODING,
             SearchEngineSettings(),
@@ -174,7 +187,9 @@ class MapboxActivity(private val authSession: AuthSessionInterface = AuthSession
                 }
             }
         )
+    }
 
+    private fun setupMapAndNavigation() {
         if (authSession.accessToken == null) {
             startActivity(Intent(this, MainActivity::class.java))
             finish()
@@ -187,173 +202,71 @@ class MapboxActivity(private val authSession: AuthSessionInterface = AuthSession
         } else {
             locationPermissionRequest.launch(arrayOf(Manifest.permission.ACCESS_COARSE_LOCATION))
         }
+    }
 
-        setContent {
-            val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
-            val scope = rememberCoroutineScope()
-            val context = LocalContext.current
-            val isNavigatingState = isNavigating.collectAsState()
-            val routeProgressState = currentRouteProgress.collectAsState()
-            val lifecycleOwner = LocalLifecycleOwner.current
-            DisposableEffect(Unit) {
-                coroutineScope = scope
-                onDispose {
-                    coroutineScope = null
-                }
-            }
+    // ===== Map and Navigation Methods =====
 
-            DisposableEffect(lifecycleOwner) {
-                val observer = LifecycleEventObserver { _, event ->
-                    when (event) {
-                        Lifecycle.Event.ON_START -> {
-                            mapView?.onStart()
-                        }
-                        Lifecycle.Event.ON_STOP -> {
-                            mapView?.onStop()
-                        }
-                        Lifecycle.Event.ON_DESTROY -> {
-                            mapView?.onDestroy()
-                        }
-                        else -> {}
-                    }
-                }
-                lifecycleOwner.lifecycle.addObserver(observer)
-                onDispose {
-                    lifecycleOwner.lifecycle.removeObserver(observer)
-                }
-            }
+    @SuppressLint("MissingPermission")
+    private fun initializeMapComponents() {
+        setupMapView()
+        setupViewportDataSource()
+        setupNavigationCamera()
+        setupRouteLine()
+    }
 
-            BackHandler {
-                if (drawerState.isOpen) {
-                    scope.launch {
-                        drawerState.close()
-                    }
-                }
-            }
-            SupmapTheme {
-                Box(modifier = Modifier.fillMaxSize()) {
-                    SidebarWithFab(
-                        onSignOut = {
-                            scope.launch {
-                                try {
-                                    googleAuthHelper.signOut()
-                                    Log.d("MapboxActivity", "Successfully signed out from Google")
-                                } catch (e: Exception) {
-                                    Log.e("MapboxActivity", "Error signing out from Google", e)
-                                }
-
-                                authSession.clear()
-                                startActivity(Intent(context, MainActivity::class.java))
-                                finish()
-                            }
-                        },
-                        onSearchClick = { showDestinationInput() },
-                        onCenterLocation = { centerOnCurrentLocation() },
-                        onDebug = {
-                            Log.d("POSITION", fusedLocationClient.lastLocation.toString())
-                        },
-                        isLocationCentered = isLocationCentered.collectAsState().value,
-                        drawerState = drawerState
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .pointerInput(Unit) {
-                                    detectTapGestures {}
-                                }
-                        ) {
-                            mapView?.let { view ->
-                                AndroidView(
-                                    factory = { view },
-                                    modifier = Modifier.fillMaxSize().testTag("Map View")
-                                )
-                            }
-                            DestinationBottomSheet()
-
-                            if (isNavigatingState.value) {
-                                NavigationSnackbar(
-                                    distanceInMeters = routeProgressState.value?.distanceRemaining
-                                        ?: 0,
-                                    onCancelNavigation = { cancelNavigation() },
-                                    onDebug = {
-                                        Log.d(
-                                            "ROUTE PROGRESS STATE",
-                                            routeProgressState.toString()
-                                        )
-
-                                        Log.d(
-                                            "ROUTE PROGRESS STATE 2",
-                                            routeProgressState.value.toString()
-                                        )
-
-                                        Log.d(
-                                            "REPLAYER ",
-                                            replayer.toString()
-                                        )
-                                    },
-                                    modifier = Modifier
-                                        .align(Alignment.TopStart)
-                                        .padding(16.dp),
-                                    origin = currentPoint!!,
-                                    destination = destinationPoint!!,
-                                )
-                            } else {
-                                SnackbarHost(
-                                    hostState = snackbarHostState,
-                                    modifier = Modifier.align(Alignment.Center)
-                                )
-                            }
-                        }
-                    }
-                }
-            }
+    private fun setupMapView() {
+        mapView = MapView(this).apply {
+            setupInitialLocation()
+            setupLocationComponent()
+            setupMapClickListener()
         }
     }
 
     @SuppressLint("MissingPermission")
-    private fun initializeMapComponents() {
-        mapView = MapView(this).apply {
-            // Get the last known location and center the map on it
-            fusedLocationClient.lastLocation.addOnSuccessListener { lastLocation ->
-                if (lastLocation != null) {
-                    currentPoint = Point.fromLngLat(lastLocation.longitude, lastLocation.latitude)
-                    val currentLocation = currentPoint!!
-                    mapboxMap.setCamera(
-                        CameraOptions.Builder()
-                            .center(currentLocation)
-                            .zoom(15.0)
-                            .bearing(0.0)
-                            .pitch(0.0)
-                            .build()
-                    )
-                    isLocationCentered.value = true
-                } else {
-                    // Fallback to a default location if last location is not available
-                    currentPoint = Point.fromLngLat(0.0, 0.0)
-                    mapboxMap.setCamera(
-                        CameraOptions.Builder()
-                            .center(currentPoint!!)
-                            .zoom(2.0)
-                            .build()
-                    )
-                }
-            }
-
-            mapView?.location?.apply {
-                setLocationProvider(navigationLocationProvider)
-                locationPuck = createDefault2DPuck(withBearing = true)
-                pulsingEnabled = true
-                enabled = true
-            }
-
-            // Add click listener for route calculation
-            mapboxMap.addOnMapClickListener { point ->
-                cancelNavigation()
-                calculateRouteToDestination(point)
-                true
+    private fun MapView.setupInitialLocation() {
+        fusedLocationClient.lastLocation.addOnSuccessListener { lastLocation ->
+            if (lastLocation != null) {
+                currentPoint = Point.fromLngLat(lastLocation.longitude, lastLocation.latitude)
+                val currentLocation = currentPoint!!
+                mapboxMap.setCamera(
+                    CameraOptions.Builder()
+                        .center(currentLocation)
+                        .zoom(15.0)
+                        .bearing(0.0)
+                        .pitch(0.0)
+                        .build()
+                )
+                isLocationCentered.value = true
+            } else {
+                currentPoint = Point.fromLngLat(0.0, 0.0)
+                mapboxMap.setCamera(
+                    CameraOptions.Builder()
+                        .center(currentPoint!!)
+                        .zoom(2.0)
+                        .build()
+                )
             }
         }
+    }
 
+    private fun MapView.setupLocationComponent() {
+        location?.apply {
+            setLocationProvider(navigationLocationProvider)
+            locationPuck = createDefault2DPuck(withBearing = true)
+            pulsingEnabled = true
+            enabled = true
+        }
+    }
+
+    private fun MapView.setupMapClickListener() {
+        mapboxMap.addOnMapClickListener { point ->
+            cancelNavigation()
+            calculateRouteToDestination(point)
+            true
+        }
+    }
+
+    private fun setupViewportDataSource() {
         viewportDataSource = MapboxNavigationViewportDataSource(mapView!!.mapboxMap).apply {
             val pixelDensity = resources.displayMetrics.density
             followingPadding = EdgeInsets(
@@ -363,15 +276,368 @@ class MapboxActivity(private val authSession: AuthSessionInterface = AuthSession
                 40.0 * pixelDensity
             )
         }
+    }
 
+    private fun setupNavigationCamera() {
         navigationCamera = NavigationCamera(
             mapView!!.mapboxMap,
             mapView!!.camera,
             viewportDataSource!!
         )
+    }
 
+    private fun setupRouteLine() {
         routeLineApi = MapboxRouteLineApi(MapboxRouteLineApiOptions.Builder().build())
         routeLineView = MapboxRouteLineView(MapboxRouteLineViewOptions.Builder(this).build())
+    }
+
+    // ===== Navigation Control Methods =====
+
+    @SuppressLint("MissingPermission")
+    private fun calculateRouteToDestination(point: Point? = null) {
+        val destination = point ?: selectedDestination.value ?: return
+        destinationPoint = destination
+        if (coroutineScope == null) return
+
+        if (!hasLocationPermission()) return
+
+        fusedLocationClient.lastLocation.addOnSuccessListener { lastLocation ->
+            if (lastLocation != null) {
+                val origin = Point.fromLngLat(lastLocation.longitude, lastLocation.latitude)
+                requestRoute(origin, destination)
+            } else {
+                handleLocationError()
+            }
+        }.addOnFailureListener { e ->
+            Log.e("MapboxActivity", "Error getting location", e)
+            showRouteError()
+        }
+    }
+
+    private fun hasLocationPermission(): Boolean {
+        return ActivityCompat.checkSelfPermission(
+            this,
+            Manifest.permission.ACCESS_FINE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED || ActivityCompat.checkSelfPermission(
+            this,
+            Manifest.permission.ACCESS_COARSE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED
+    }
+
+    private fun requestRoute(origin: Point, destination: Point) {
+        mapboxNavigation.requestRoutes(
+            RouteOptions.builder()
+                .applyDefaultNavigationOptions()
+                .coordinatesList(listOf(origin, destination))
+                .layersList(listOf(mapboxNavigation.getZLevel(), null))
+                .build(),
+            object : NavigationRouterCallback {
+                override fun onCanceled(routeOptions: RouteOptions, routerOrigin: String) {
+                    Log.e("MapboxActivity", "Route calculation canceled")
+                    showRouteError()
+                }
+                override fun onFailure(reasons: List<RouterFailure>, routeOptions: RouteOptions) {
+                    Log.e("MapboxActivity", "Route calculation failed: ${reasons.joinToString()}")
+                    showRouteError()
+                }
+                override fun onRoutesReady(routes: List<NavigationRoute>, routerOrigin: String) {
+                    if (routes.isEmpty()) {
+                        showRouteError()
+                        return
+                    }
+                    startNavigation(routes)
+                }
+            }
+        )
+    }
+
+    private fun handleLocationError() {
+        Log.e("MapboxActivity", "Could not get current location")
+        coroutineScope?.launch {
+            snackbarHostState.showSnackbar(
+                message = "Could not get your current location. Please try again.",
+                withDismissAction = true
+            )
+        }
+    }
+
+    @OptIn(ExperimentalPreviewMapboxNavigationAPI::class)
+    private fun startNavigation(routes: List<NavigationRoute>) {
+        if (routes.isEmpty()) return
+
+        currentRouteProgress.value = null
+        mapboxNavigation.setNavigationRoutes(routes)
+        isNavigating.value = true
+
+        registerNavigationObservers()
+        startNavigationSession()
+        updateCameraForNavigation()
+    }
+
+    private fun registerNavigationObservers() {
+        mapboxNavigation.registerTripSessionStateObserver(tripSessionStateObserver)
+        mapboxNavigation.registerRouteProgressObserver(routeProgressObserver)
+        mapboxNavigation.registerRouteProgressObserver(replayProgressObserver!!)
+    }
+
+    @OptIn(ExperimentalPreviewMapboxNavigationAPI::class)
+    @SuppressLint("MissingPermission")
+    private fun startNavigationSession() {
+        if (!hasLocationPermission()) return
+        navigationCamera?.requestNavigationCameraToFollowing()
+        mapboxNavigation.startTripSession()
+        mapboxNavigation.mapboxReplayer.play()
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun updateCameraForNavigation() {
+        fusedLocationClient.lastLocation.addOnSuccessListener { lastLocation ->
+            if (lastLocation != null) {
+                val currentLocation = Point.fromLngLat(lastLocation.longitude, lastLocation.latitude)
+                mapView?.mapboxMap?.easeTo(
+                    CameraOptions.Builder()
+                        .center(currentLocation)
+                        .zoom(17.0)
+                        .bearing(0.0)
+                        .pitch(0.0)
+                        .build(),
+                    MapAnimationOptions.Builder()
+                        .duration(1000)
+                        .build()
+                )
+                isLocationCentered.value = true
+            }
+        }
+    }
+
+    @OptIn(ExperimentalPreviewMapboxNavigationAPI::class)
+    private fun cancelNavigation() {
+        unregisterNavigationObservers()
+        stopNavigationSession()
+        clearNavigationState()
+        clearRouteLine()
+    }
+
+    private fun unregisterNavigationObservers() {
+        mapboxNavigation.unregisterTripSessionStateObserver(tripSessionStateObserver)
+        mapboxNavigation.unregisterRouteProgressObserver(routeProgressObserver)
+        mapboxNavigation.unregisterRouteProgressObserver(replayProgressObserver!!)
+    }
+
+    @OptIn(ExperimentalPreviewMapboxNavigationAPI::class)
+    private fun stopNavigationSession() {
+        mapboxNavigation.stopTripSession()
+        navigationCamera?.requestNavigationCameraToOverview()
+        centerOnCurrentLocation()
+        mapboxNavigation.mapboxReplayer.stop()
+    }
+
+    private fun clearNavigationState() {
+        mapboxNavigation.setNavigationRoutes(emptyList())
+        isNavigating.value = false
+        currentRouteProgress.value = null
+    }
+
+    private fun clearRouteLine() {
+        routeLineApi?.clearRouteLine { result ->
+            result.fold(
+                { error -> Log.e("MapboxActivity", "Error clearing route line: $error") },
+                {
+                    routeLineApi?.setNavigationRoutes(emptyList()) { routeSetValue ->
+                        mapView?.mapboxMap?.style?.apply {
+                            routeLineView?.renderRouteDrawData(this, routeSetValue)
+                        }
+                    }
+                }
+            )
+        }
+    }
+
+    // ===== Location Methods =====
+
+    private fun centerOnCurrentLocation() {
+        if (!hasLocationPermission()) {
+            requestLocationPermission()
+            return
+        }
+
+        if (!isNavigating.value) {
+            mapboxNavigation.stopTripSession()
+            navigationCamera?.requestNavigationCameraToOverview()
+        }
+
+        updateCurrentLocation()
+        updateLocationComponent()
+    }
+
+    private fun requestLocationPermission() {
+        locationPermissionRequest.launch(arrayOf(
+            Manifest.permission.ACCESS_FINE_LOCATION,
+            Manifest.permission.ACCESS_COARSE_LOCATION
+        ))
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun updateCurrentLocation() {
+        fusedLocationClient.lastLocation.addOnSuccessListener { lastLocation ->
+            if (lastLocation != null) {
+                currentPoint = Point.fromLngLat(lastLocation.longitude, lastLocation.latitude)
+                mapView?.mapboxMap?.easeTo(
+                    CameraOptions.Builder()
+                        .center(currentPoint!!)
+                        .zoom(15.0)
+                        .bearing(0.0)
+                        .pitch(0.0)
+                        .build(),
+                    MapAnimationOptions.Builder()
+                        .duration(1000)
+                        .build()
+                )
+                isLocationCentered.value = true
+            }
+        }
+    }
+
+    private fun updateLocationComponent() {
+        mapView?.location?.apply {
+            locationPuck = createDefault2DPuck(withBearing = true)
+            enabled = true
+            pulsingEnabled = true
+        }
+    }
+
+    // ===== UI Methods =====
+
+    @SuppressLint("MissingPermission")
+    private fun setupComposeUI() {
+        setContent {
+            val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
+            val scope = rememberCoroutineScope()
+            val context = LocalContext.current
+            val isNavigatingState = isNavigating.collectAsState()
+            val routeProgressState = currentRouteProgress.collectAsState()
+            val lifecycleOwner = LocalLifecycleOwner.current
+
+            setupCoroutineScope(scope)
+            setupLifecycleObserver(lifecycleOwner)
+            setupBackHandler(drawerState, scope)
+
+            SupmapTheme {
+                Box(modifier = Modifier.fillMaxSize()) {
+                    SidebarWithFab(
+                        onSignOut = { handleSignOut(scope, context) },
+                        onSearchClick = { showDestinationInput() },
+                        onCenterLocation = { centerOnCurrentLocation() },
+                        onDebug = { Log.d("POSITION", fusedLocationClient.lastLocation.toString()) },
+                        isLocationCentered = isLocationCentered.collectAsState().value,
+                        drawerState = drawerState
+                    ) {
+                        MapContent(
+                            isNavigatingState = isNavigatingState,
+                            routeProgressState = routeProgressState
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    @Composable
+    private fun setupCoroutineScope(scope: CoroutineScope) {
+        DisposableEffect(Unit) {
+            coroutineScope = scope
+            onDispose {
+                coroutineScope = null
+            }
+        }
+    }
+
+    @Composable
+    private fun setupLifecycleObserver(lifecycleOwner: androidx.lifecycle.LifecycleOwner) {
+        DisposableEffect(lifecycleOwner) {
+            val observer = LifecycleEventObserver { _, event ->
+                when (event) {
+                    Lifecycle.Event.ON_START -> mapView?.onStart()
+                    Lifecycle.Event.ON_STOP -> mapView?.onStop()
+                    Lifecycle.Event.ON_DESTROY -> mapView?.onDestroy()
+                    else -> {}
+                }
+            }
+            lifecycleOwner.lifecycle.addObserver(observer)
+            onDispose {
+                lifecycleOwner.lifecycle.removeObserver(observer)
+            }
+        }
+    }
+
+    @Composable
+    private fun setupBackHandler(drawerState: androidx.compose.material3.DrawerState, scope: CoroutineScope) {
+        BackHandler {
+            if (drawerState.isOpen) {
+                scope.launch {
+                    drawerState.close()
+                }
+            }
+        }
+    }
+
+    private fun handleSignOut(scope: CoroutineScope, context: android.content.Context) {
+        scope.launch {
+            try {
+                googleAuthHelper.signOut()
+                Log.d("MapboxActivity", "Successfully signed out from Google")
+            } catch (e: Exception) {
+                Log.e("MapboxActivity", "Error signing out from Google", e)
+            }
+
+            authSession.clear()
+            startActivity(Intent(context, MainActivity::class.java))
+            finish()
+        }
+    }
+
+    @Composable
+    private fun MapContent(
+        isNavigatingState: androidx.compose.runtime.State<Boolean>,
+        routeProgressState: androidx.compose.runtime.State<RouteProgress?>
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .pointerInput(Unit) {
+                    detectTapGestures {}
+                }
+        ) {
+            mapView?.let { view ->
+                AndroidView(
+                    factory = { view },
+                    modifier = Modifier.fillMaxSize().testTag("Map View")
+                )
+            }
+            DestinationBottomSheet()
+
+            if (isNavigatingState.value) {
+                NavigationSnackbar(
+                    distanceInMeters = routeProgressState.value?.distanceRemaining ?: 0,
+                    onCancelNavigation = { cancelNavigation() },
+                    onDebug = {
+                        Log.d("ROUTE PROGRESS STATE", routeProgressState.toString())
+                        Log.d("ROUTE PROGRESS STATE 2", routeProgressState.value.toString())
+                        Log.d("REPLAYER ", replayer.toString())
+                    },
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .padding(16.dp),
+                    origin = currentPoint!!,
+                    destination = destinationPoint!!,
+                )
+            } else {
+                SnackbarHost(
+                    hostState = snackbarHostState,
+                    modifier = Modifier.align(Alignment.Center)
+                )
+            }
+        }
     }
 
     @Composable
@@ -400,62 +666,20 @@ class MapboxActivity(private val authSession: AuthSessionInterface = AuthSession
         }
     }
 
-    private fun calculateRouteToDestination(point: Point? = null) {
-        val destination = point ?: selectedDestination.value ?: return
-        destinationPoint = destination  // Set the destination point
-        if (coroutineScope == null) return
+    // ===== Navigation Observers =====
 
-        if (ActivityCompat.checkSelfPermission(
-                this,
-                Manifest.permission.ACCESS_FINE_LOCATION
-            ) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(
-                this,
-                Manifest.permission.ACCESS_COARSE_LOCATION
-            ) != PackageManager.PERMISSION_GRANTED
-        ) {
-            return
-        }
-        fusedLocationClient.lastLocation.addOnSuccessListener { lastLocation ->
-            if (lastLocation != null) {
-                val origin = Point.fromLngLat(lastLocation.longitude, lastLocation.latitude)
-                mapboxNavigation.requestRoutes(
-                    RouteOptions.builder()
-                        .applyDefaultNavigationOptions()
-                        .coordinatesList(listOf(origin, destination))
-                        .layersList(listOf(mapboxNavigation.getZLevel(), null))
-                        .build(),
-                    object : NavigationRouterCallback {
-                        override fun onCanceled(routeOptions: RouteOptions, routerOrigin: String) {
-                            Log.e("MapboxActivity", "Route calculation canceled")
-                            showRouteError()
-                        }
-                        override fun onFailure(reasons: List<RouterFailure>, routeOptions: RouteOptions) {
-                            Log.e("MapboxActivity", "Route calculation failed: ${reasons.joinToString()}")
-                            showRouteError()
-                        }
-                        override fun onRoutesReady(routes: List<NavigationRoute>, routerOrigin: String) {
-                            if (routes.isEmpty()) {
-                                showRouteError()
-                                return
-                            }
-                            startNavigation(routes)
-                        }
-                    }
-                )
-            } else {
-                Log.e("MapboxActivity", "Could not get current location")
-                coroutineScope?.launch {
-                    snackbarHostState.showSnackbar(
-                        message = "Could not get your current location. Please try again.",
-                        withDismissAction = true
-                    )
+    private val locationPermissionRequest =
+        registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
+            when {
+                permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true -> {
+                    initializeMapComponents()
+                    centerOnCurrentLocation()
+                }
+                else -> {
+                    Log.e("MapboxActivity", "Location permissions denied")
                 }
             }
-        }.addOnFailureListener { e ->
-            Log.e("MapboxActivity", "Error getting location", e)
-            showRouteError()
         }
-    }
 
     private val routesObserver = RoutesObserver { routeUpdateResult ->
         if (routeUpdateResult.navigationRoutes.isNotEmpty()) {
@@ -525,12 +749,9 @@ class MapboxActivity(private val authSession: AuthSessionInterface = AuthSession
                 }
             }
 
-            // Get the formatted trip progress update
             tripProgressApi.getTripProgress(routeProgress).let { update ->
                 Log.d("TRIP_PROGRESS", "Formatted distance: ${update.distanceRemaining}")
             }
-
-
         }
 
     private val tripSessionStateObserver =
@@ -538,106 +759,14 @@ class MapboxActivity(private val authSession: AuthSessionInterface = AuthSession
             Log.d("TRIP_SESSION", "Session state changed: $state")
             when (state) {
                 TripSessionState.STARTED -> {
-                    // Trip session started, we can now receive route progress updates
                     Log.d("TRIP_SESSION", "Trip session started")
                 }
-
                 TripSessionState.STOPPED -> {
-                    // Trip session stopped, clear the progress
                     Log.d("TRIP_SESSION", "Trip session stopped")
                     currentRouteProgress.value = null
                 }
             }
         }
-
-    @OptIn(ExperimentalPreviewMapboxNavigationAPI::class)
-    private fun startNavigation(routes: List<NavigationRoute>) {
-        if (routes.isEmpty()) return
-
-        // Clear any existing route progress
-        currentRouteProgress.value = null
-
-        // Set up the route
-        mapboxNavigation.setNavigationRoutes(routes)
-        isNavigating.value = true
-
-        // Register observers in the correct order
-        mapboxNavigation.registerTripSessionStateObserver(tripSessionStateObserver)
-        mapboxNavigation.registerRouteProgressObserver(routeProgressObserver)
-        mapboxNavigation.registerRouteProgressObserver(replayProgressObserver!!)
-
-        // Start the trip session
-        if (ActivityCompat.checkSelfPermission(
-                this,
-                Manifest.permission.ACCESS_FINE_LOCATION
-            ) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(
-                this,
-                Manifest.permission.ACCESS_COARSE_LOCATION
-            ) != PackageManager.PERMISSION_GRANTED
-        ) {
-            return
-        }
-        navigationCamera?.requestNavigationCameraToFollowing()
-        mapboxNavigation.startTripSession()
-
-        // Start the replay session
-        mapboxNavigation.mapboxReplayer.play()
-
-        // Switch to following mode for navigation
-        fusedLocationClient.lastLocation.addOnSuccessListener { lastLocation ->
-            if (lastLocation != null) {
-                val currentLocation = Point.fromLngLat(lastLocation.longitude, lastLocation.latitude)
-                // Animate camera to the new position
-                mapView?.mapboxMap?.easeTo(
-                    CameraOptions.Builder()
-                        .center(currentLocation)
-                        .zoom(17.0)
-                        .bearing(0.0)
-                        .pitch(0.0)
-                        .build(),
-                    MapAnimationOptions.Builder()
-                        .duration(1000) // 1 second animation
-                        .build()
-                )
-                isLocationCentered.value = true
-            }
-        }
-    }
-
-    @OptIn(ExperimentalPreviewMapboxNavigationAPI::class)
-    private fun cancelNavigation() {
-        // Unregister observers first
-        mapboxNavigation.unregisterTripSessionStateObserver(tripSessionStateObserver)
-        mapboxNavigation.unregisterRouteProgressObserver(routeProgressObserver)
-        mapboxNavigation.unregisterRouteProgressObserver(replayProgressObserver!!)
-
-        // Stop the trip session
-        mapboxNavigation.stopTripSession()
-        navigationCamera?.requestNavigationCameraToOverview()
-        centerOnCurrentLocation()
-        // Stop the replay session
-        mapboxNavigation.mapboxReplayer.stop()
-
-        // Clear routes and state
-        mapboxNavigation.setNavigationRoutes(emptyList())
-        isNavigating.value = false
-        currentRouteProgress.value = null
-
-        // Clear the route line
-        routeLineApi?.clearRouteLine { result ->
-            result.fold(
-                { error -> Log.e("MapboxActivity", "Error clearing route line: $error") },
-                {
-                    routeLineApi?.setNavigationRoutes(emptyList()) { routeSetValue ->
-                        mapView?.mapboxMap?.style?.apply {
-                            routeLineView?.renderRouteDrawData(this, routeSetValue)
-                        }
-                    }
-                }
-            )
-        }
-
-    }
 
     private fun initNavigation() {
         MapboxNavigationApp.setup(NavigationOptions.Builder(this).build())
@@ -652,58 +781,5 @@ class MapboxActivity(private val authSession: AuthSessionInterface = AuthSession
             mapboxReplayer = replayer,
             replayRouteMapper = replayRouteMapper
         )
-    }
-
-    private fun centerOnCurrentLocation() {
-        if (ActivityCompat.checkSelfPermission(
-                this,
-                Manifest.permission.ACCESS_FINE_LOCATION
-            ) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(
-                this,
-                Manifest.permission.ACCESS_COARSE_LOCATION
-            ) != PackageManager.PERMISSION_GRANTED
-        ) {
-            locationPermissionRequest.launch(arrayOf(
-                Manifest.permission.ACCESS_FINE_LOCATION,
-                Manifest.permission.ACCESS_COARSE_LOCATION
-            ))
-            return
-        }
-
-        if (!isNavigating.value) {
-            mapboxNavigation.stopTripSession()
-            navigationCamera?.requestNavigationCameraToOverview()
-        }
-
-        fusedLocationClient.lastLocation.addOnSuccessListener { lastLocation ->
-            if (lastLocation != null) {
-                currentPoint = Point.fromLngLat(lastLocation.longitude, lastLocation.latitude)
-                // Animate camera to the new position
-                mapView?.mapboxMap?.easeTo(
-                    CameraOptions.Builder()
-                        .center(currentPoint!!)
-                        .zoom(15.0)
-                        .bearing(0.0)
-                        .pitch(0.0)
-                        .build(),
-                    MapAnimationOptions.Builder()
-                        .duration(1000) // 1 second animation
-                        .build()
-                )
-                isLocationCentered.value = true
-            }
-        }
-
-        mapView?.location?.apply {
-            locationPuck = createDefault2DPuck(withBearing = true)
-            enabled = true
-            pulsingEnabled = true
-        }
-    }
-
-    override fun onConfigurationChanged(newConfig: Configuration) {
-        super.onConfigurationChanged(newConfig)
-        // Switch to overview mode on screen rotation
-        navigationCamera?.requestNavigationCameraToOverview()
     }
 }
