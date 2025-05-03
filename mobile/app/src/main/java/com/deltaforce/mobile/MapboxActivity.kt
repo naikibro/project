@@ -97,7 +97,9 @@ import com.mapbox.navigation.tripdata.progress.model.TripProgressUpdateFormatter
 import com.mapbox.navigation.core.trip.session.TripSessionState
 import com.mapbox.navigation.core.trip.session.TripSessionStateObserver
 import android.content.res.Configuration
-
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.deltaforce.mobile.ui.navigation.NavigationViewModel
+import androidx.activity.viewModels
 
 class MapboxActivity(private val authSession: AuthSessionInterface = AuthSession) : ComponentActivity() {
     private lateinit var authApiService: AuthApiService
@@ -111,6 +113,7 @@ class MapboxActivity(private val authSession: AuthSessionInterface = AuthSession
     private val navigationLocationProvider = NavigationLocationProvider()
     private val replayRouteMapper = ReplayRouteMapper()
     private lateinit var fusedLocationClient: FusedLocationProviderClient
+    private var currentPoint: Point? = null
     private var destinationPoint: Point? = null
     private var coroutineScope: CoroutineScope? = null
     private var searchEngine: SearchEngine? = null
@@ -121,7 +124,8 @@ class MapboxActivity(private val authSession: AuthSessionInterface = AuthSession
     private val isNavigating = MutableStateFlow(false)
     private val currentRouteProgress = MutableStateFlow<RouteProgress?>(null)
     private val replayer = MapboxReplayer()
-    
+    private val navigationViewModel: NavigationViewModel by viewModels()
+
     private val tripProgressApi: MapboxTripProgressApi by lazy {
         val distanceFormatterOptions = DistanceFormatterOptions.Builder(this).build()
         val formatter = TripProgressUpdateFormatter.Builder(this)
@@ -190,9 +194,7 @@ class MapboxActivity(private val authSession: AuthSessionInterface = AuthSession
             val context = LocalContext.current
             val isNavigatingState = isNavigating.collectAsState()
             val routeProgressState = currentRouteProgress.collectAsState()
-            val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
-
-            // Store the coroutine scope for use in calculateRouteToDestination
+            val lifecycleOwner = LocalLifecycleOwner.current
             DisposableEffect(Unit) {
                 coroutineScope = scope
                 onDispose {
@@ -239,7 +241,7 @@ class MapboxActivity(private val authSession: AuthSessionInterface = AuthSession
                                 } catch (e: Exception) {
                                     Log.e("MapboxActivity", "Error signing out from Google", e)
                                 }
-                                
+
                                 authSession.clear()
                                 startActivity(Intent(context, MainActivity::class.java))
                                 finish()
@@ -270,24 +272,30 @@ class MapboxActivity(private val authSession: AuthSessionInterface = AuthSession
 
                             if (isNavigatingState.value) {
                                 NavigationSnackbar(
-                                    distanceInMeters = routeProgressState.value?.distanceRemaining ?: 0,
+                                    distanceInMeters = routeProgressState.value?.distanceRemaining
+                                        ?: 0,
                                     onCancelNavigation = { cancelNavigation() },
                                     onDebug = {
-                                        Log.d("ROUTE PROGRESS STATE",
+                                        Log.d(
+                                            "ROUTE PROGRESS STATE",
                                             routeProgressState.toString()
                                         )
 
-                                        Log.d("ROUTE PROGRESS STATE 2",
+                                        Log.d(
+                                            "ROUTE PROGRESS STATE 2",
                                             routeProgressState.value.toString()
                                         )
 
-                                        Log.d("REPLAYER ",
+                                        Log.d(
+                                            "REPLAYER ",
                                             replayer.toString()
                                         )
                                     },
                                     modifier = Modifier
                                         .align(Alignment.TopStart)
-                                        .padding(16.dp)
+                                        .padding(16.dp),
+                                    origin = currentPoint!!,
+                                    destination = destinationPoint!!,
                                 )
                             } else {
                                 SnackbarHost(
@@ -308,7 +316,8 @@ class MapboxActivity(private val authSession: AuthSessionInterface = AuthSession
             // Get the last known location and center the map on it
             fusedLocationClient.lastLocation.addOnSuccessListener { lastLocation ->
                 if (lastLocation != null) {
-                    val currentLocation = Point.fromLngLat(lastLocation.longitude, lastLocation.latitude)
+                    currentPoint = Point.fromLngLat(lastLocation.longitude, lastLocation.latitude)
+                    val currentLocation = currentPoint!!
                     mapboxMap.setCamera(
                         CameraOptions.Builder()
                             .center(currentLocation)
@@ -320,9 +329,10 @@ class MapboxActivity(private val authSession: AuthSessionInterface = AuthSession
                     isLocationCentered.value = true
                 } else {
                     // Fallback to a default location if last location is not available
+                    currentPoint = Point.fromLngLat(0.0, 0.0)
                     mapboxMap.setCamera(
                         CameraOptions.Builder()
-                            .center(Point.fromLngLat(0.0, 0.0))
+                            .center(currentPoint!!)
                             .zoom(2.0)
                             .build()
                     )
@@ -392,6 +402,7 @@ class MapboxActivity(private val authSession: AuthSessionInterface = AuthSession
 
     private fun calculateRouteToDestination(point: Point? = null) {
         val destination = point ?: selectedDestination.value ?: return
+        destinationPoint = destination  // Set the destination point
         if (coroutineScope == null) return
 
         if (ActivityCompat.checkSelfPermission(
@@ -463,6 +474,7 @@ class MapboxActivity(private val authSession: AuthSessionInterface = AuthSession
         override fun onNewRawLocation(rawLocation: Location) {}
         override fun onNewLocationMatcherResult(locationMatcherResult: LocationMatcherResult) {
             val enhancedLocation = locationMatcherResult.enhancedLocation
+            currentPoint = Point.fromLngLat(enhancedLocation.longitude, enhancedLocation.latitude)
             navigationLocationProvider.changePosition(
                 location = enhancedLocation,
                 keyPoints = locationMatcherResult.keyPoints,
@@ -496,15 +508,29 @@ class MapboxActivity(private val authSession: AuthSessionInterface = AuthSession
         onInitialize = this::initNavigation
     )
 
+    @SuppressLint("MissingPermission")
     private val routeProgressObserver =
         RouteProgressObserver { routeProgress ->
             Log.d("ROUTE_PROGRESS", "Distance remaining: ${routeProgress.distanceRemaining}")
             currentRouteProgress.value = routeProgress
 
+            fusedLocationClient.lastLocation.addOnSuccessListener { loc ->
+                val origin = Point.fromLngLat(loc.longitude, loc.latitude)
+                destinationPoint?.let { dest ->
+                    navigationViewModel.updateDistance(
+                        origin,
+                        dest,
+                        routeProgress.distanceRemaining
+                    )
+                }
+            }
+
             // Get the formatted trip progress update
             tripProgressApi.getTripProgress(routeProgress).let { update ->
                 Log.d("TRIP_PROGRESS", "Formatted distance: ${update.distanceRemaining}")
             }
+
+
         }
 
     private val tripSessionStateObserver =
@@ -539,7 +565,7 @@ class MapboxActivity(private val authSession: AuthSessionInterface = AuthSession
         mapboxNavigation.registerTripSessionStateObserver(tripSessionStateObserver)
         mapboxNavigation.registerRouteProgressObserver(routeProgressObserver)
         mapboxNavigation.registerRouteProgressObserver(replayProgressObserver!!)
-        
+
         // Start the trip session
         if (ActivityCompat.checkSelfPermission(
                 this,
@@ -551,8 +577,9 @@ class MapboxActivity(private val authSession: AuthSessionInterface = AuthSession
         ) {
             return
         }
+        navigationCamera?.requestNavigationCameraToFollowing()
         mapboxNavigation.startTripSession()
-        
+
         // Start the replay session
         mapboxNavigation.mapboxReplayer.play()
 
@@ -575,7 +602,6 @@ class MapboxActivity(private val authSession: AuthSessionInterface = AuthSession
                 isLocationCentered.value = true
             }
         }
-        navigationCamera?.requestNavigationCameraToFollowing()
     }
 
     @OptIn(ExperimentalPreviewMapboxNavigationAPI::class)
@@ -584,13 +610,14 @@ class MapboxActivity(private val authSession: AuthSessionInterface = AuthSession
         mapboxNavigation.unregisterTripSessionStateObserver(tripSessionStateObserver)
         mapboxNavigation.unregisterRouteProgressObserver(routeProgressObserver)
         mapboxNavigation.unregisterRouteProgressObserver(replayProgressObserver!!)
-        
+
         // Stop the trip session
         mapboxNavigation.stopTripSession()
-        
+        navigationCamera?.requestNavigationCameraToOverview()
+        centerOnCurrentLocation()
         // Stop the replay session
         mapboxNavigation.mapboxReplayer.stop()
-        
+
         // Clear routes and state
         mapboxNavigation.setNavigationRoutes(emptyList())
         isNavigating.value = false
@@ -609,8 +636,7 @@ class MapboxActivity(private val authSession: AuthSessionInterface = AuthSession
                 }
             )
         }
-        navigationCamera?.requestNavigationCameraToOverview()
-        centerOnCurrentLocation()
+
     }
 
     private fun initNavigation() {
@@ -643,13 +669,19 @@ class MapboxActivity(private val authSession: AuthSessionInterface = AuthSession
             ))
             return
         }
+
+        if (!isNavigating.value) {
+            mapboxNavigation.stopTripSession()
+            navigationCamera?.requestNavigationCameraToOverview()
+        }
+
         fusedLocationClient.lastLocation.addOnSuccessListener { lastLocation ->
             if (lastLocation != null) {
-                val currentLocation = Point.fromLngLat(lastLocation.longitude, lastLocation.latitude)
+                currentPoint = Point.fromLngLat(lastLocation.longitude, lastLocation.latitude)
                 // Animate camera to the new position
                 mapView?.mapboxMap?.easeTo(
                     CameraOptions.Builder()
-                        .center(currentLocation)
+                        .center(currentPoint!!)
                         .zoom(15.0)
                         .bearing(0.0)
                         .pitch(0.0)

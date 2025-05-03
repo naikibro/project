@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -100,6 +101,15 @@ fun SidebarWithFab(
                     ) {
                         Icon(
                             imageVector = Icons.Default.LocationOn,
+                            contentDescription = ""
+                        )
+                    }
+                    FloatingActionButton(
+                        onClick = { onDebug() },
+                        modifier = Modifier.testTag("Alert FAB")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Warning,
                             contentDescription = ""
                         )
                     }

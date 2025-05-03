@@ -6,19 +6,25 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.mapbox.geojson.Point
+import com.deltaforce.mobile.BuildConfig
 
 @Composable
 fun NavigationSnackbar(
+    origin: Point,
+    destination: Point,
     distanceInMeters: Number,
     onCancelNavigation: () -> Unit,
     onDebug: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val viewModel: NavigationViewModel = viewModel()
+    val viewModel: NavigationViewModel = viewModel(
+        factory = NavigationViewModel.provideFactory(BuildConfig.MAPBOX_ACCESS_TOKEN)
+    )
     
-    // Update the view model when distance changes
-    LaunchedEffect(distanceInMeters) {
-        viewModel.updateDistance(distanceInMeters)
+    // Update the view model when distance or points change
+    LaunchedEffect(origin, destination, distanceInMeters) {
+        viewModel.updateDistance(origin, destination, distanceInMeters)
     }
     
     // Collect the navigation state
