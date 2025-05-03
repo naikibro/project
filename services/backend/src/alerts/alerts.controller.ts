@@ -6,6 +6,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
@@ -15,6 +16,8 @@ import { Claim } from './../auth/rbac/claims.enum';
 import { AlertsService } from './alerts.service';
 import { CreateAlertDto } from './dto/create-alert.dto';
 import { UpdateAlertDto } from './dto/update-alert.dto';
+import { lastValueFrom } from 'rxjs';
+import { Alert } from './entities/alert.entity';
 
 @Controller('alerts')
 export class AlertsController {
@@ -44,6 +47,23 @@ export class AlertsController {
   findAll() {
     console.log('findAll');
     return this.alertsService.findAll();
+  }
+
+  @Get('near-me')
+  @ApiOperation({ summary: 'Get alerts near me' })
+  @ApiResponse({
+    status: 200,
+    description: 'Returns all alerts near the user.',
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async findAlertsNearMe(
+    @Query('latitude') latitude: number,
+    @Query('longitude') longitude: number,
+  ): Promise<Alert[]> {
+    const result = (await lastValueFrom(
+      this.alertsService.findAlertsNearMe(latitude, longitude),
+    )) as Alert[];
+    return Array.isArray(result) ? result : [result];
   }
 
   @Get(':id')

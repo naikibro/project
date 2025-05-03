@@ -29,6 +29,24 @@ export class AlertsService {
     return alert;
   }
 
+  async findAlertsNearMe(
+    latitude: number,
+    longitude: number,
+  ): Promise<Alert[]> {
+    return this.alertsRepository
+      .createQueryBuilder('alert')
+      .where(`alert.coordinates->>'latitude' BETWEEN :minLat AND :maxLat`, {
+        minLat: latitude - 0.1,
+        maxLat: latitude + 0.1,
+      })
+      .andWhere(`alert.coordinates->>'longitude' BETWEEN :minLng AND :maxLng`, {
+        minLng: longitude - 0.1,
+        maxLng: longitude + 0.1,
+      })
+      .limit(50)
+      .getMany();
+  }
+
   async update(id: number, updateAlertDto: UpdateAlertDto): Promise<Alert> {
     const alert = await this.findOne(id);
     Object.assign(alert, updateAlertDto);

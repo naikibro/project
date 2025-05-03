@@ -23,6 +23,20 @@ export class AlertsGateway {
     return this.alertsService.findOne(id);
   }
 
+  @MessagePattern('findAlertsNearMe')
+  async findAlertsNearMe(
+    @Payload() data: { latitude: number; longitude: number },
+  ) {
+    try {
+      return await this.alertsService.findAlertsNearMe(
+        data.latitude,
+        data.longitude,
+      );
+    } catch {
+      return [];
+    }
+  }
+
   @MessagePattern('updateAlert')
   update(@Payload() updateAlertDto: UpdateAlertDto) {
     return this.alertsService.update(updateAlertDto.id, updateAlertDto);

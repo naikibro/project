@@ -4,6 +4,7 @@ import AuthSession
 import AuthSessionInterface
 import android.Manifest
 import android.annotation.SuppressLint
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
@@ -102,9 +103,20 @@ import android.content.res.Configuration
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.deltaforce.mobile.ui.navigation.NavigationViewModel
 import androidx.activity.viewModels
+import androidx.compose.material3.DrawerState
+import androidx.compose.runtime.State
+import androidx.lifecycle.LifecycleOwner
+import com.deltaforce.mobile.network.Alert
 import com.deltaforce.mobile.ui.alerts.CreateAlertModal
 import com.deltaforce.mobile.ui.alerts.AlertData
 import com.deltaforce.mobile.network.AlertService
+import com.deltaforce.mobile.ui.alerts.AlertMarker
+import com.deltaforce.mobile.ui.alerts.AlertPopup
+import com.mapbox.maps.plugin.annotation.generated.PointAnnotationManager
+import com.mapbox.maps.plugin.annotation.generated.PointAnnotationOptions
+import com.mapbox.maps.plugin.annotation.AnnotationPlugin
+import com.mapbox.maps.plugin.annotation.annotations
+import com.mapbox.maps.plugin.annotation.generated.createPointAnnotationManager
 
 class MapboxActivity(private val authSession: AuthSessionInterface = AuthSession) : ComponentActivity() {
     // ===== Properties =====
@@ -138,6 +150,9 @@ class MapboxActivity(private val authSession: AuthSessionInterface = AuthSession
     private val replayer = MapboxReplayer()
     private val navigationViewModel: NavigationViewModel by viewModels()
     private val isAlertModalVisible = MutableStateFlow(false)
+    private val selectedAlert = MutableStateFlow<Alert?>(null)
+    private val nearbyAlerts = MutableStateFlow<List<Alert>>(emptyList())
+    private var alertAnnotationManager: PointAnnotationManager? = null
 
     // Navigation Components
     private val tripProgressApi: MapboxTripProgressApi by lazy {
@@ -225,6 +240,7 @@ class MapboxActivity(private val authSession: AuthSessionInterface = AuthSession
             setupInitialLocation()
             setupLocationComponent()
             setupMapClickListener()
+            setupAlertAnnotationManager()
         }
     }
 
@@ -262,6 +278,10 @@ class MapboxActivity(private val authSession: AuthSessionInterface = AuthSession
             pulsingEnabled = true
             enabled = true
         }
+    }
+
+    private fun MapView.setupAlertAnnotationManager() {
+        alertAnnotationManager = this.annotations.createPointAnnotationManager()
     }
 
     private fun MapView.setupMapClickListener() {
@@ -500,6 +520,7 @@ class MapboxActivity(private val authSession: AuthSessionInterface = AuthSession
                         .build()
                 )
                 isLocationCentered.value = true
+                fetchNearbyAlerts(lastLocation.latitude, lastLocation.longitude)
             }
         }
     }
@@ -509,6 +530,31 @@ class MapboxActivity(private val authSession: AuthSessionInterface = AuthSession
             locationPuck = createDefault2DPuck(withBearing = true)
             enabled = true
             pulsingEnabled = true
+        }
+    }
+
+    private fun fetchNearbyAlerts(latitude: Double, longitude: Double) {
+        coroutineScope?.launch {
+            try {
+                val alertService = AlertService(
+                    tokenProvider = { authSession.accessToken }
+                )
+                val response = withContext(Dispatchers.IO) {
+                    alertService.getAlertsNearMe(latitude, longitude).execute()
+                }
+                
+                if (response.isSuccessful) {
+                    nearbyAlerts.value = response.body() ?: emptyList()
+                } else {
+                    throw Exception("Failed to fetch alerts: \\${response.code()}")
+                }
+            } catch (e: Exception) {
+                Log.e("MapboxActivity", "Error fetching alerts", e)
+                snackbarHostState.showSnackbar(
+                    message = "Failed to fetch alerts. Please try again.",
+                    withDismissAction = true
+                )
+            }
         }
     }
 
@@ -574,7 +620,7 @@ class MapboxActivity(private val authSession: AuthSessionInterface = AuthSession
     }
 
     @Composable
-    private fun setupLifecycleObserver(lifecycleOwner: androidx.lifecycle.LifecycleOwner) {
+    private fun setupLifecycleObserver(lifecycleOwner: LifecycleOwner) {
         DisposableEffect(lifecycleOwner) {
             val observer = LifecycleEventObserver { _, event ->
                 when (event) {
@@ -592,7 +638,7 @@ class MapboxActivity(private val authSession: AuthSessionInterface = AuthSession
     }
 
     @Composable
-    private fun setupBackHandler(drawerState: androidx.compose.material3.DrawerState, scope: CoroutineScope) {
+    private fun setupBackHandler(drawerState: DrawerState, scope: CoroutineScope) {
         BackHandler {
             if (drawerState.isOpen) {
                 scope.launch {
@@ -602,7 +648,7 @@ class MapboxActivity(private val authSession: AuthSessionInterface = AuthSession
         }
     }
 
-    private fun handleSignOut(scope: CoroutineScope, context: android.content.Context) {
+    private fun handleSignOut(scope: CoroutineScope, context: Context) {
         scope.launch {
             try {
                 googleAuthHelper.signOut()
@@ -617,10 +663,11 @@ class MapboxActivity(private val authSession: AuthSessionInterface = AuthSession
         }
     }
 
+    @SuppressLint("StateFlowValueCalledInComposition")
     @Composable
     private fun MapContent(
-        isNavigatingState: androidx.compose.runtime.State<Boolean>,
-        routeProgressState: androidx.compose.runtime.State<RouteProgress?>
+        isNavigatingState: State<Boolean>,
+        routeProgressState: State<RouteProgress?>
     ) {
         Box(
             modifier = Modifier
@@ -658,6 +705,24 @@ class MapboxActivity(private val authSession: AuthSessionInterface = AuthSession
                     modifier = Modifier.align(Alignment.Center)
                 )
             }
+
+            selectedAlert.value?.let { alert ->
+                AlertPopup(
+                    alert = alert,
+                    onDismiss = { selectedAlert.value = null }
+                )
+            }
+
+            // Display alerts on map
+            alertAnnotationManager?.let { manager ->
+                nearbyAlerts.value.forEach { alert ->
+                    AlertMarker(
+                        alert = alert,
+                        annotationManager = manager,
+                        onClick = { selectedAlert.value = it }
+                    )
+                }
+            }
         }
     }
 
@@ -691,7 +756,9 @@ class MapboxActivity(private val authSession: AuthSessionInterface = AuthSession
     private fun handleAlertCreation(alertData: AlertData) {
         coroutineScope?.launch {
             try {
-                val alertService = AlertService()
+                val alertService = AlertService(
+                    tokenProvider = { authSession.accessToken }
+                )
                 val response = withContext(Dispatchers.IO) {
                     alertService.createAlert(alertData.toAlert()).execute()
                 }
@@ -702,7 +769,7 @@ class MapboxActivity(private val authSession: AuthSessionInterface = AuthSession
                         withDismissAction = true
                     )
                 } else {
-                    throw Exception("Failed to create alert: ${response.code()}")
+                    throw Exception("Failed to create alert: \\${response.code()}")
                 }
             } catch (e: Exception) {
                 Log.e("MapboxActivity", "Error creating alert", e)

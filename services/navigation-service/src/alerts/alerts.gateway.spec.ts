@@ -7,7 +7,7 @@ import { CreateAlertDto } from './dto/create-alert.dto';
 import { UpdateAlertDto } from './dto/update-alert.dto';
 import { AlertType } from './entities/alert.type';
 
-describe('AlertsController', () => {
+describe('AlertsGateway', () => {
   let controller: AlertsGateway;
   let service: AlertsService;
 
@@ -61,6 +61,7 @@ describe('AlertsController', () => {
               .fn()
               .mockResolvedValue({ ...mockAlert, ...mockUpdateAlertDto }),
             remove: jest.fn().mockResolvedValue(mockAlert),
+            findAlertsNearMe: jest.fn().mockResolvedValue([mockAlert]),
           },
         },
       ],
@@ -95,6 +96,18 @@ describe('AlertsController', () => {
       const result = await controller.findOne(1);
       expect(service.findOne).toHaveBeenCalledWith(1);
       expect(result).toEqual(mockAlert);
+    });
+  });
+
+  describe('findAlertsNearMe', () => {
+    it('should return alerts near the given coordinates', async () => {
+      const coords = { latitude: 38.89768, longitude: -77.03655 };
+      const result = await controller.findAlertsNearMe(coords);
+      expect(service.findAlertsNearMe).toHaveBeenCalledWith(
+        coords.latitude,
+        coords.longitude,
+      );
+      expect(result).toEqual([mockAlert]);
     });
   });
 

@@ -36,6 +36,16 @@ export class AlertsService {
     return this.client.send('findOneAlert', id);
   }
 
+  findAlertsNearMe(latitude: number, longitude: number) {
+    return this.client.send('findAlertsNearMe', { latitude, longitude }).pipe(
+      retry(3),
+      catchError((err) => {
+        console.error('Failed to get alerts near me:', err);
+        return of([]);
+      }),
+    );
+  }
+
   update(id: number, updateAlertDto: UpdateAlertDto) {
     return this.client.send('updateAlert', { id, updateAlertDto });
   }

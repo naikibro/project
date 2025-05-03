@@ -47,6 +47,14 @@ class AlertServiceTest {
     }
 
     @Test
+    fun testGetAlertsNearMe() {
+        `when`(alertApi.getAlertsNearMe(0.0, 0.0)).thenReturn(dummyListCall)
+        val result = alertService.getAlertsNearMe(0.0, 0.0)
+        assertEquals(dummyListCall, result)
+        verify(alertApi).getAlertsNearMe(0.0, 0.0)
+    }
+
+    @Test
     fun testCreateAlert() {
         `when`(alertApi.createAlert(dummyAlert)).thenReturn(dummyCall)
         val result = alertService.createAlert(dummyAlert)

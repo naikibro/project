@@ -108,6 +108,34 @@ describe('AlertsService', () => {
     });
   });
 
+  describe('findAlertsNearMe', () => {
+    it('should call client.send with findAlertsNearMe', () => {
+      (clientProxy.send as jest.Mock).mockReturnValue(of(['a', 'b']));
+      service.findAlertsNearMe(0, 0).subscribe((result) => {
+        expect(clientProxy.send).toHaveBeenCalledWith('findAlertsNearMe', {
+          latitude: 0,
+          longitude: 0,
+        });
+        expect(result).toEqual(['a', 'b']);
+      });
+    });
+
+    it('should return [] on error', (done) => {
+      (clientProxy.send as jest.Mock).mockReturnValue(
+        throwError(() => new Error('fail')),
+      );
+      service.findAlertsNearMe(0, 0).subscribe({
+        next: (result) => {
+          expect(result).toEqual([]);
+          done();
+        },
+        error: () => {
+          done();
+        },
+      });
+    });
+  });
+
   describe('update', () => {
     it('should call client.send with updateAlert', () => {
       const dto: UpdateAlertDto = {

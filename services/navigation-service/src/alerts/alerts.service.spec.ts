@@ -49,6 +49,13 @@ describe('AlertsService', () => {
   };
 
   beforeEach(async () => {
+    const mockQueryBuilder = {
+      where: jest.fn().mockReturnThis(),
+      andWhere: jest.fn().mockReturnThis(),
+      limit: jest.fn().mockReturnThis(),
+      getMany: jest.fn().mockResolvedValue([mockAlert]),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AlertsService,
@@ -59,7 +66,9 @@ describe('AlertsService', () => {
             save: jest.fn().mockResolvedValue(mockAlert),
             find: jest.fn().mockResolvedValue([mockAlert]),
             findOne: jest.fn().mockResolvedValue(mockAlert),
+            findAlertsNearMe: jest.fn().mockResolvedValue([mockAlert]),
             remove: jest.fn().mockResolvedValue(mockAlert),
+            createQueryBuilder: jest.fn(() => mockQueryBuilder),
           },
         },
       ],
@@ -100,6 +109,13 @@ describe('AlertsService', () => {
     it('should throw NotFoundException if alert not found', async () => {
       jest.spyOn(repository, 'findOne').mockResolvedValue(null);
       await expect(service.findOne(999)).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('findAlertsNearMe', () => {
+    it('should return alerts near the given coordinates', async () => {
+      const result = await service.findAlertsNearMe(38.89768, -77.03655);
+      expect(result).toEqual([mockAlert]);
     });
   });
 
