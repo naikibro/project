@@ -10,7 +10,6 @@ import androidx.compose.ui.unit.dp
 fun NavigationButtons(
     onStopNavigation: () -> Unit,
     onAlert: () -> Unit,
-    onDanger: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Row(
@@ -37,17 +36,6 @@ fun NavigationButtons(
             )
         ) {
             Text("Alert")
-        }
-        Spacer(modifier = Modifier.width(4.dp))
-        Button(
-            onClick = onDanger,
-            modifier = Modifier.weight(1f),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.errorContainer,
-                contentColor = MaterialTheme.colorScheme.onErrorContainer
-            )
-        ) {
-            Text("Danger")
         }
     }
 } 

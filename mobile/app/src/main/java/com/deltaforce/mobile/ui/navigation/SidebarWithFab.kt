@@ -23,7 +23,6 @@ fun SidebarWithFab(
     onSearchClick: () -> Unit,
     onCenterLocation: () -> Unit,
     onAlert: () -> Unit,
-    onDebug: () -> Unit,
     isLocationCentered: Boolean,
     drawerState: DrawerState,
     content: @Composable (PaddingValues) -> Unit
@@ -97,7 +96,7 @@ fun SidebarWithFab(
                     verticalAlignment = Alignment.Bottom
                 ) {
                     FloatingActionButton(
-                        onClick = { onCenterLocation(); onDebug() },
+                        onClick = { onCenterLocation(); },
                         modifier = Modifier.testTag("Center Location FAB")
                     ) {
                         Icon(
@@ -155,8 +154,7 @@ fun SidebarWithFabPreviewClosed() {
         SidebarWithFab(
             onSignOut = { },
             onSearchClick = { },
-            onAlert = {/*TODO*/},
-            onDebug = { },
+            onAlert = {},
             onCenterLocation = { },
             isLocationCentered = false,
             drawerState = rememberDrawerState(DrawerValue.Closed)
@@ -180,7 +178,6 @@ fun SidebarWithFabPreviewOpen() {
             onSignOut = { },
             onSearchClick = { },
             onAlert = {},
-            onDebug = { },
             onCenterLocation = { },
             isLocationCentered = false,
             drawerState = rememberDrawerState(DrawerValue.Open)

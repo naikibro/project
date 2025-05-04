@@ -110,13 +110,22 @@ import com.deltaforce.mobile.network.Alert
 import com.deltaforce.mobile.ui.alerts.CreateAlertModal
 import com.deltaforce.mobile.ui.alerts.AlertData
 import com.deltaforce.mobile.network.AlertService
-import com.deltaforce.mobile.ui.alerts.AlertMarker
 import com.deltaforce.mobile.ui.alerts.AlertPopup
 import com.mapbox.maps.plugin.annotation.generated.PointAnnotationManager
 import com.mapbox.maps.plugin.annotation.generated.PointAnnotationOptions
-import com.mapbox.maps.plugin.annotation.AnnotationPlugin
 import com.mapbox.maps.plugin.annotation.annotations
 import com.mapbox.maps.plugin.annotation.generated.createPointAnnotationManager
+import android.graphics.BitmapFactory
+import androidx.compose.runtime.LaunchedEffect
+import com.mapbox.maps.plugin.animation.flyTo
+import com.mapbox.maps.plugin.annotation.AnnotationConfig
+import com.mapbox.maps.plugin.annotation.generated.CircleAnnotation
+import com.mapbox.maps.plugin.annotation.generated.CircleAnnotationManager
+import com.mapbox.maps.plugin.annotation.generated.CircleAnnotationOptions
+import com.mapbox.maps.plugin.annotation.generated.OnCircleAnnotationClickListener
+import com.mapbox.maps.plugin.annotation.generated.createCircleAnnotationManager
+import kotlin.math.pow
+import kotlin.math.sqrt
 
 class MapboxActivity(private val authSession: AuthSessionInterface = AuthSession) : ComponentActivity() {
     // ===== Properties =====
@@ -152,7 +161,8 @@ class MapboxActivity(private val authSession: AuthSessionInterface = AuthSession
     private val isAlertModalVisible = MutableStateFlow(false)
     private val selectedAlert = MutableStateFlow<Alert?>(null)
     private val nearbyAlerts = MutableStateFlow<List<Alert>>(emptyList())
-    private var alertAnnotationManager: PointAnnotationManager? = null
+
+    private var alertAnnotationManager: CircleAnnotationManager? = null
 
     // Navigation Components
     private val tripProgressApi: MapboxTripProgressApi by lazy {
@@ -210,6 +220,7 @@ class MapboxActivity(private val authSession: AuthSessionInterface = AuthSession
         )
     }
 
+    @RequiresApi(Build.VERSION_CODES.O)
     private fun setupMapAndNavigation() {
         if (authSession.accessToken == null) {
             startActivity(Intent(this, MainActivity::class.java))
@@ -227,14 +238,18 @@ class MapboxActivity(private val authSession: AuthSessionInterface = AuthSession
 
     // ===== Map and Navigation Methods =====
 
+    @RequiresApi(Build.VERSION_CODES.O)
     @SuppressLint("MissingPermission")
     private fun initializeMapComponents() {
+        defaultAnnotation()
         setupMapView()
         setupViewportDataSource()
         setupNavigationCamera()
         setupRouteLine()
+        updateCurrentLocation()
     }
 
+    @RequiresApi(Build.VERSION_CODES.O)
     private fun setupMapView() {
         mapView = MapView(this).apply {
             setupInitialLocation()
@@ -259,20 +274,12 @@ class MapboxActivity(private val authSession: AuthSessionInterface = AuthSession
                         .build()
                 )
                 isLocationCentered.value = true
-            } else {
-                currentPoint = Point.fromLngLat(0.0, 0.0)
-                mapboxMap.setCamera(
-                    CameraOptions.Builder()
-                        .center(currentPoint!!)
-                        .zoom(2.0)
-                        .build()
-                )
             }
         }
     }
 
     private fun MapView.setupLocationComponent() {
-        location?.apply {
+        location.apply {
             setLocationProvider(navigationLocationProvider)
             locationPuck = createDefault2DPuck(withBearing = true)
             pulsingEnabled = true
@@ -280,14 +287,119 @@ class MapboxActivity(private val authSession: AuthSessionInterface = AuthSession
         }
     }
 
+    @RequiresApi(Build.VERSION_CODES.O)
     private fun MapView.setupAlertAnnotationManager() {
-        alertAnnotationManager = this.annotations.createPointAnnotationManager()
+        alertAnnotationManager = this.annotations.createCircleAnnotationManager()
+
+        // 2) Decode & register your icon
+        val iconBitmap = BitmapFactory.decodeResource(
+            this@MapboxActivity.resources,
+            R.drawable.red_marker
+        )
+
+        // 3) After registration, draw any existing nearbyAlerts
+        updateAlertAnnotations()
     }
 
+    private fun updateAlertAnnotations() {
+        alertAnnotationManager?.deleteAll()
+        nearbyAlerts.value.forEach { alert ->
+            val point = Point.fromLngLat(
+                (alert.coordinates["longitude"] as Number).toDouble(),
+                (alert.coordinates["latitude"]  as Number).toDouble()
+            )
+
+            alertAnnotationManager?.create(
+                CircleAnnotationOptions()
+                    .withPoint(point)
+                    .withCircleRadius(8.0)
+                    .withCircleColor("#ee4e8b")
+                    .withCircleStrokeWidth(2.0)
+                    .withCircleStrokeColor("#ffffff")
+            )
+        }
+    }
+
+
+    @RequiresApi(Build.VERSION_CODES.O)
+    private fun defaultAnnotation() {
+        // Set up the annotation manager
+        Log.d("TITITAUTAU TARERE", alertAnnotationManager.toString())
+        val circleAnnotationOptions: CircleAnnotationOptions = CircleAnnotationOptions()
+            .withPoint(Point.fromLngLat(2.3315467, 48.8808))
+            .withCircleRadius(8.0)
+            .withCircleColor("#ee4e8b")
+            .withCircleStrokeWidth(2.0)
+            .withCircleStrokeColor("#ffffff")
+
+        val annotation = alertAnnotationManager?.create(circleAnnotationOptions)
+
+    }
+
+    @RequiresApi(Build.VERSION_CODES.O)
     private fun MapView.setupMapClickListener() {
+        alertAnnotationManager?.addClickListener(OnCircleAnnotationClickListener { annotation ->
+
+            // Find the corresponding alert for this annotation
+            val clickedPoint = annotation.point
+            val matchingAlert = nearbyAlerts.value.find { alert ->
+                val alertPoint = Point.fromLngLat(
+                    (alert.coordinates["longitude"] as Number).toDouble(),
+                    (alert.coordinates["latitude"] as Number).toDouble()
+                )
+                alertPoint.longitude() == clickedPoint.longitude() &&
+                alertPoint.latitude() == clickedPoint.latitude()
+            }
+
+            matchingAlert?.let { alert ->
+                // Show the alert popup
+                selectedAlert.value = alert
+                // Center the map on the clicked annotation
+                mapboxMap.flyTo(
+                    CameraOptions.Builder()
+                        .center(clickedPoint)
+                        .zoom(15.0)
+                        .build(),
+                    MapAnimationOptions.Builder()
+                        .duration(1000)
+                        .build()
+                )
+            }
+            true // Return true to indicate the event was handled
+        })
+
+        // Only handle map clicks if they're not on an annotation
         mapboxMap.addOnMapClickListener { point ->
-            cancelNavigation()
-            calculateRouteToDestination(point)
+            // Check if the click was on an annotation
+            var clickedAlert: Alert? = null
+
+            // 2) any { … } must return true/false for each alert
+            val clickedOnAnnotation = nearbyAlerts.value.any { alert ->
+                val alertPoint = Point.fromLngLat(
+                    (alert.coordinates["longitude"] as Number).toDouble(),
+                    (alert.coordinates["latitude"]  as Number).toDouble()
+                )
+                val dx = point.longitude() - alertPoint.longitude()
+                val dy = point.latitude()  - alertPoint.latitude()
+                val distance = sqrt(dx.pow(2) + dy.pow(2))
+
+                if (distance < 0.0001) {
+                    clickedAlert = alert  // capture which one
+                    true                   // signal “this alert was clicked”
+                } else {
+                    false
+                }
+            }
+
+            if (!clickedOnAnnotation) {
+                cancelNavigation()
+                calculateRouteToDestination(point)
+            } else {
+                clickedAlert?.let { alert ->
+                    selectedAlert.value = alert
+                }
+            }
+
             true
         }
     }
@@ -423,7 +535,7 @@ class MapboxActivity(private val authSession: AuthSessionInterface = AuthSession
                 mapView?.mapboxMap?.easeTo(
                     CameraOptions.Builder()
                         .center(currentLocation)
-                        .zoom(17.0)
+                        .zoom(5.0)
                         .bearing(0.0)
                         .pitch(0.0)
                         .build(),
@@ -436,6 +548,7 @@ class MapboxActivity(private val authSession: AuthSessionInterface = AuthSession
         }
     }
 
+    @RequiresApi(Build.VERSION_CODES.O)
     @OptIn(ExperimentalPreviewMapboxNavigationAPI::class)
     private fun cancelNavigation() {
         unregisterNavigationObservers()
@@ -450,11 +563,12 @@ class MapboxActivity(private val authSession: AuthSessionInterface = AuthSession
         mapboxNavigation.unregisterRouteProgressObserver(replayProgressObserver!!)
     }
 
+    @RequiresApi(Build.VERSION_CODES.O)
     @OptIn(ExperimentalPreviewMapboxNavigationAPI::class)
     private fun stopNavigationSession() {
         mapboxNavigation.stopTripSession()
-        navigationCamera?.requestNavigationCameraToOverview()
         centerOnCurrentLocation()
+        navigationCamera?.requestNavigationCameraToOverview()
         mapboxNavigation.mapboxReplayer.stop()
     }
 
@@ -481,6 +595,7 @@ class MapboxActivity(private val authSession: AuthSessionInterface = AuthSession
 
     // ===== Location Methods =====
 
+    @RequiresApi(Build.VERSION_CODES.O)
     private fun centerOnCurrentLocation() {
         if (!hasLocationPermission()) {
             requestLocationPermission()
@@ -489,13 +604,13 @@ class MapboxActivity(private val authSession: AuthSessionInterface = AuthSession
 
         if (!isNavigating.value) {
             mapboxNavigation.stopTripSession()
-            navigationCamera?.requestNavigationCameraToOverview()
         }
 
         updateCurrentLocation()
         updateLocationComponent()
     }
 
+    @RequiresApi(Build.VERSION_CODES.O)
     private fun requestLocationPermission() {
         locationPermissionRequest.launch(arrayOf(
             Manifest.permission.ACCESS_FINE_LOCATION,
@@ -505,10 +620,11 @@ class MapboxActivity(private val authSession: AuthSessionInterface = AuthSession
 
     @SuppressLint("MissingPermission")
     private fun updateCurrentLocation() {
+
         fusedLocationClient.lastLocation.addOnSuccessListener { lastLocation ->
             if (lastLocation != null) {
                 currentPoint = Point.fromLngLat(lastLocation.longitude, lastLocation.latitude)
-                mapView?.mapboxMap?.easeTo(
+                mapView?.mapboxMap?.flyTo(
                     CameraOptions.Builder()
                         .center(currentPoint!!)
                         .zoom(15.0)
@@ -542,7 +658,7 @@ class MapboxActivity(private val authSession: AuthSessionInterface = AuthSession
                 val response = withContext(Dispatchers.IO) {
                     alertService.getAlertsNearMe(latitude, longitude).execute()
                 }
-                
+
                 if (response.isSuccessful) {
                     nearbyAlerts.value = response.body() ?: emptyList()
                 } else {
@@ -583,7 +699,6 @@ class MapboxActivity(private val authSession: AuthSessionInterface = AuthSession
                         onSearchClick = { showDestinationInput() },
                         onCenterLocation = { centerOnCurrentLocation() },
                         onAlert = { isAlertModalVisible.value = true },
-                        onDebug = { Log.d("POSITION", fusedLocationClient.lastLocation.toString()) },
                         isLocationCentered = isLocationCentered.collectAsState().value,
                         drawerState = drawerState
                     ) {
@@ -663,12 +778,14 @@ class MapboxActivity(private val authSession: AuthSessionInterface = AuthSession
         }
     }
 
+    @RequiresApi(Build.VERSION_CODES.O)
     @SuppressLint("StateFlowValueCalledInComposition")
     @Composable
     private fun MapContent(
         isNavigatingState: State<Boolean>,
         routeProgressState: State<RouteProgress?>
     ) {
+        val alert = selectedAlert.collectAsState().value
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -682,16 +799,14 @@ class MapboxActivity(private val authSession: AuthSessionInterface = AuthSession
                     modifier = Modifier.fillMaxSize().testTag("Map View")
                 )
             }
-            DestinationBottomSheet()
 
+            DestinationBottomSheet()
             if (isNavigatingState.value) {
                 NavigationSnackbar(
                     distanceInMeters = routeProgressState.value?.distanceRemaining ?: 0,
                     onCancelNavigation = { cancelNavigation() },
-                    onDebug = {
-                        Log.d("ROUTE PROGRESS STATE", routeProgressState.toString())
-                        Log.d("ROUTE PROGRESS STATE 2", routeProgressState.value.toString())
-                        Log.d("REPLAYER ", replayer.toString())
+                    onAlert = {
+                        isAlertModalVisible.value = true
                     },
                     modifier = Modifier
                         .align(Alignment.TopStart)
@@ -706,22 +821,16 @@ class MapboxActivity(private val authSession: AuthSessionInterface = AuthSession
                 )
             }
 
-            selectedAlert.value?.let { alert ->
-                AlertPopup(
-                    alert = alert,
-                    onDismiss = { selectedAlert.value = null }
-                )
+            // Update alerts when nearbyAlerts changes
+            LaunchedEffect(nearbyAlerts) {
+                defaultAnnotation()
             }
 
-            // Display alerts on map
-            alertAnnotationManager?.let { manager ->
-                nearbyAlerts.value.forEach { alert ->
-                    AlertMarker(
-                        alert = alert,
-                        annotationManager = manager,
-                        onClick = { selectedAlert.value = it }
-                    )
-                }
+            alert?.let {
+                AlertPopup(
+                    alert = it,
+                    onDismiss = { selectedAlert.value = null }
+                )
             }
         }
     }
@@ -762,7 +871,7 @@ class MapboxActivity(private val authSession: AuthSessionInterface = AuthSession
                 val response = withContext(Dispatchers.IO) {
                     alertService.createAlert(alertData.toAlert()).execute()
                 }
-                
+
                 if (response.isSuccessful) {
                     snackbarHostState.showSnackbar(
                         message = "Alert created successfully",
@@ -783,6 +892,7 @@ class MapboxActivity(private val authSession: AuthSessionInterface = AuthSession
 
     // ===== Navigation Observers =====
 
+    @RequiresApi(Build.VERSION_CODES.O)
     private val locationPermissionRequest =
         registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
             when {

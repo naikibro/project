@@ -7,6 +7,8 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.http.*
 import okhttp3.OkHttpClient
+import android.util.Log
+import okhttp3.logging.HttpLoggingInterceptor
 
 data class Alert(
     val id: Int? = null,
@@ -45,6 +47,9 @@ class AlertService(
     private val api: AlertApi = alertApi ?: run {
         val client = OkHttpClient.Builder()
             .addInterceptor(AuthInterceptor(tokenProvider))
+            .addInterceptor(HttpLoggingInterceptor().apply {
+                level = HttpLoggingInterceptor.Level.BODY
+            })
             .build()
         val retrofit = Retrofit.Builder()
             .baseUrl(baseUrl)
@@ -58,7 +63,10 @@ class AlertService(
 
     fun getAlert(id: Int): Call<Alert> = api.getAlert(id)
 
-    fun getAlertsNearMe(latitude: Double, longitude: Double): Call<List<Alert>> = api.getAlertsNearMe(latitude, longitude)
+    fun getAlertsNearMe(latitude: Double, longitude: Double): Call<List<Alert>> {
+        Log.d("AlertService", "Getting alerts near location - Latitude: $latitude, Longitude: $longitude")
+        return api.getAlertsNearMe(latitude, longitude)
+    }
 
     fun createAlert(alert: Alert): Call<Alert> = api.createAlert(alert)
 

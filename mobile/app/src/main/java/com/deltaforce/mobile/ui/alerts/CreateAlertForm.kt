@@ -126,7 +126,6 @@ private fun AlertCategorySelector(
     }
 }
 
-/* TODO : please make this work with backend model */
 enum class AlertCategory(val backendValue: String) {
     INFO("info"),
     ACCIDENT("accident"),

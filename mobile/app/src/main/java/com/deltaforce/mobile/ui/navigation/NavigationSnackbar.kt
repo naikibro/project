@@ -15,7 +15,7 @@ fun NavigationSnackbar(
     destination: Point,
     distanceInMeters: Number,
     onCancelNavigation: () -> Unit,
-    onDebug: () -> Unit,
+    onAlert: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val viewModel: NavigationViewModel = viewModel(
@@ -49,8 +49,7 @@ fun NavigationSnackbar(
 
             NavigationButtons(
                 onStopNavigation = onCancelNavigation,
-                onAlert = onDebug,
-                onDanger = onDebug
+                onAlert = onAlert,
             )
         }
     }
