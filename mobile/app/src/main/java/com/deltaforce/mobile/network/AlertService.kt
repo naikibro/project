@@ -64,7 +64,7 @@ class AlertService(
     fun getAlert(id: Int): Call<Alert> = api.getAlert(id)
 
     fun getAlertsNearMe(latitude: Double, longitude: Double): Call<List<Alert>> {
-        Log.d("AlertService", "Getting alerts near location - Latitude: $latitude, Longitude: $longitude")
+        // Log.d("AlertService", "Getting alerts near location - Latitude: $latitude, Longitude: $longitude")
         return api.getAlertsNearMe(latitude, longitude)
     }
 

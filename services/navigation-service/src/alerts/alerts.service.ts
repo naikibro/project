@@ -32,33 +32,18 @@ export class AlertsService {
     latitude: number,
     longitude: number,
   ): Promise<Alert[]> {
-    // 1° of latitude ≃ 111.32 km
-    const latDelta: number = 5 /* km */ / 111.32;
-
-    // 1° of longitude ≃ 111.32 km × cos φ
-    const lngDelta: number =
-      5 /* km */ / (111.32 * Math.cos((latitude * Math.PI) / 180));
-
-    const minLat: number = latitude - latDelta;
-    const maxLat: number = latitude + latDelta;
-    const minLng: number = longitude - lngDelta;
-    const maxLng: number = longitude + lngDelta;
-
-    const fifteenMinutesAgo: Date = new Date(Date.now() - 15 * 60 * 1000);
-
     return this.alertsRepository
       .createQueryBuilder('alert')
-      .where(
-        `(alert.coordinates->>'latitude')::float BETWEEN :minLat AND :maxLat`,
-        { minLat, maxLat },
-      )
-      .andWhere(
-        `(alert.coordinates->>'longitude')::float BETWEEN :minLng AND :maxLng`,
-        { minLng, maxLng },
-      )
-      .andWhere('alert.createdAt >= :date', { date: fifteenMinutesAgo })
+      .where(`alert.coordinates->>'latitude' BETWEEN :minLat AND :maxLat`, {
+        minLat: latitude - 0.1,
+        maxLat: latitude + 0.1,
+      })
+      .andWhere(`alert.coordinates->>'longitude' BETWEEN :minLng AND :maxLng`, {
+        minLng: longitude - 0.1,
+        maxLng: longitude + 0.1,
+      })
       .limit(50)
-      .orderBy('alert.createdAt', 'DESC')
+      .orderBy('alert.date', 'DESC')
       .getMany();
   }
 

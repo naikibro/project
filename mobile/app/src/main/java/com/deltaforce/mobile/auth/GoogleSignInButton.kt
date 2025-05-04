@@ -81,6 +81,7 @@ fun GoogleSignInButton(
                 Log.d("GoogleSignInButton", "Sign-in successful, redirecting to MapboxActivity")
                 val response = state.value.user!!
                 authSession.setToken(response.accessToken)
+                authSession.setUser(response.user)
                 onSignInSuccess(response)
                 
                 val intent = Intent(context, MapboxActivity::class.java).apply {

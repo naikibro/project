@@ -2,19 +2,28 @@ package com.deltaforce.mobile.ui.navigation
 
 import android.content.Intent
 import android.net.Uri
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import coil.compose.AsyncImage
+import com.deltaforce.mobile.R
+import com.deltaforce.mobile.network.User
 import kotlinx.coroutines.launch
 
 @Composable
@@ -23,6 +32,7 @@ fun SidebarWithFab(
     onSearchClick: () -> Unit,
     onCenterLocation: () -> Unit,
     onAlert: () -> Unit,
+    user: User?,
     isLocationCentered: Boolean,
     drawerState: DrawerState,
     content: @Composable (PaddingValues) -> Unit
@@ -45,6 +55,72 @@ fun SidebarWithFab(
                         .fillMaxSize()
                         .padding(16.dp)
                 ) {
+                    // Profile section with avatar
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 16.dp)
+                            .clickable {
+                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.supmap.fr/sign-in"))
+                                context.startActivity(intent)
+                            },
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surface
+                        ),
+                        elevation = CardDefaults.cardElevation(
+                            defaultElevation = 2.dp
+                        )
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            if (user != null) {
+                                AsyncImage(
+                                    model = user.profilePicture,
+                                    contentDescription = "Profile picture",
+                                    modifier = Modifier
+                                        .size(64.dp)
+                                        .clip(CircleShape),
+                                    contentScale = ContentScale.Crop,
+                                    error = painterResource(id = R.drawable.baseline_person_24)
+                                )
+                            } else {
+                                Icon(
+                                    imageVector = Icons.Default.Person,
+                                    contentDescription = "Profile picture",
+                                    modifier = Modifier.size(64.dp)
+                                )
+                            }
+                            Column {
+                                if (user != null) {
+                                    Text(
+                                        text = user.username,
+                                        style = MaterialTheme.typography.titleLarge
+                                    )
+                                    Text(
+                                        text = user.email,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                } else {
+                                    Text(
+                                        text = "Guest User",
+                                        style = MaterialTheme.typography.titleLarge
+                                    )
+                                    Text(
+                                        text = "Sign in to access your profile",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
+                    }
+
                     Spacer(modifier = Modifier.weight(1f))
 
                     Row(
@@ -144,51 +220,5 @@ fun SidebarWithFab(
                 }
             }
         )
-    }
-}
-
-@Preview(showBackground = true, name = "Sidebar Closed")
-@Composable
-fun SidebarWithFabPreviewClosed() {
-    MaterialTheme {
-        SidebarWithFab(
-            onSignOut = { },
-            onSearchClick = { },
-            onAlert = {},
-            onCenterLocation = { },
-            isLocationCentered = false,
-            drawerState = rememberDrawerState(DrawerValue.Closed)
-        ) { innerPadding ->
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding)
-            ) {
-                Text(text = "Preview of Main Content (Sidebar Closed)")
-            }
-        }
-    }
-}
-
-@Preview(showBackground = true, name = "Sidebar Open")
-@Composable
-fun SidebarWithFabPreviewOpen() {
-    MaterialTheme {
-        SidebarWithFab(
-            onSignOut = { },
-            onSearchClick = { },
-            onAlert = {},
-            onCenterLocation = { },
-            isLocationCentered = false,
-            drawerState = rememberDrawerState(DrawerValue.Open)
-        ) { innerPadding ->
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding)
-            ) {
-                Text(text = "Preview of Main Content (Sidebar Open)")
-            }
-        }
     }
 }

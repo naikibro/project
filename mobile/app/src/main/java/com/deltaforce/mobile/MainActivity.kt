@@ -144,13 +144,3 @@ fun WelcomeBox(
         AuthBox(onAuthSuccess = onAuthSuccess)
     }
 }
-
-@Preview(showBackground = true)
-@Composable
-fun WelcomeBoxPreview() {
-    SupmapTheme {
-        WelcomeBox(
-            modifier = Modifier
-        )
-    }
-}

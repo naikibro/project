@@ -53,6 +53,7 @@ describe('AlertsService', () => {
       where: jest.fn().mockReturnThis(),
       andWhere: jest.fn().mockReturnThis(),
       limit: jest.fn().mockReturnThis(),
+      orderBy: jest.fn().mockReturnThis(),
       getMany: jest.fn().mockResolvedValue([mockAlert]),
     };
 

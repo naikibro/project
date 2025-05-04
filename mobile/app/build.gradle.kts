@@ -116,6 +116,8 @@ dependencies {
     implementation(libs.androidx.ui.text.android)
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
+    implementation(platform(libs.androidx.compose.bom.v20250401))
+    implementation(libs.coil.compose.v260)
 
     // Mapbox dependencies
     implementation(libs.autofill)

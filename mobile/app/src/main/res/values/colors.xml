@@ -9,4 +9,14 @@
     <color name="white">#FFFFFFFF</color>
     <color name="mapbox_white">#FFFFFF</color>
     <color name="mapbox_blue">#3FB1CE</color>
+    <color name="alert_info">#2196F3</color>        <!-- Bleu clair -->
+    <color name="alert_warning">#FFC107</color>     <!-- Jaune/orange -->
+    <color name="alert_error">#F44336</color>       <!-- Rouge vif -->
+    <color name="alert_accident">#8E24AA</color>    <!-- Bordeaux/violet -->
+    <color name="alert_traffic">#FF5722</color>     <!-- Orange foncé -->
+    <color name="alert_closed">#455A64</color>      <!-- Gris foncé -->
+    <color name="alert_police">#1E88E5</color>      <!-- Bleu marine -->
+    <color name="alert_obstacle">#9C27B0</color>    <!-- Violet -->
+    <color name="alert_default">#9E9E9E</color>      <!-- Gris clair -->
+
 </resources>

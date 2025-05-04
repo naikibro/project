@@ -17,7 +17,10 @@ class AlertServiceTest {
     @Before
     fun setUp() {
         alertApi = mock(AlertApi::class.java)
-        alertService = AlertService(alertApi, "http://localhost/")
+        alertService = AlertService(
+            alertApi, "http://localhost/",
+            tokenProvider = { " " }
+        )
         dummyAlert = Alert(
             id = 1,
             title = "Test",

@@ -281,8 +281,12 @@ fun AuthSubmitButton(
                             onLoadingChange(false)
                             if (response.isSuccessful) {
                                 val token = response.body()?.accessToken ?: ""
+                                val user  =response.body()?.user
                                 Log.d("Auth", "Login successful, Token: $token")
                                 authSession.setToken(token)
+                                if (user != null) {
+                                    authSession.setUser(user)
+                                }
                                 onSuccess()
                             } else {
                                 val errorBody = response.errorBody()?.string() ?: "Login failed."
