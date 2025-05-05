@@ -35,12 +35,12 @@ export class AlertsService {
     return this.alertsRepository
       .createQueryBuilder('alert')
       .where(`alert.coordinates->>'latitude' BETWEEN :minLat AND :maxLat`, {
-        minLat: latitude - 0.1,
-        maxLat: latitude + 0.1,
+        minLat: latitude - 1.1,
+        maxLat: latitude + 1.1,
       })
       .andWhere(`alert.coordinates->>'longitude' BETWEEN :minLng AND :maxLng`, {
-        minLng: longitude - 0.1,
-        maxLng: longitude + 0.1,
+        minLng: longitude - 1.1,
+        maxLng: longitude + 1.1,
       })
       .limit(50)
       .orderBy('alert.date', 'DESC')

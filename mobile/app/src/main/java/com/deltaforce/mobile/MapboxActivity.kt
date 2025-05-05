@@ -17,9 +17,13 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -124,6 +128,7 @@ import com.mapbox.maps.plugin.annotation.generated.OnPointAnnotationClickListene
 import com.mapbox.maps.plugin.annotation.generated.PointAnnotationManager
 import com.mapbox.maps.plugin.annotation.generated.PointAnnotationOptions
 import com.mapbox.maps.plugin.annotation.generated.createPointAnnotationManager
+import com.deltaforce.mobile.network.AlertRatingService
 
 class MapboxActivity(private val authSession: AuthSessionInterface = AuthSession) : ComponentActivity() {
     // ===== Properties =====
@@ -171,6 +176,10 @@ class MapboxActivity(private val authSession: AuthSessionInterface = AuthSession
             .estimatedTimeToArrivalFormatter(EstimatedTimeToArrivalFormatter(this))
             .build()
         MapboxTripProgressApi(formatter)
+    }
+
+    private val alertRatingService: AlertRatingService by lazy {
+        AlertRatingService(tokenProvider = { authSession.accessToken })
     }
 
     // ===== Lifecycle Methods =====
@@ -850,7 +859,32 @@ class MapboxActivity(private val authSession: AuthSessionInterface = AuthSession
             alert?.let {
                 AlertPopup(
                     alert = it,
-                    onDismiss = { selectedAlert.value = null }
+                    onDismiss = { selectedAlert.value = null },
+                    onRatingSubmit = { ratingDto ->
+                        coroutineScope?.launch {
+                            try {
+                                withContext(Dispatchers.IO) {
+                                    val response = alertRatingService.rateAlert(it.id!!, ratingDto).execute()
+                                    if (!response.isSuccessful) {
+                                        withContext(Dispatchers.Main) {
+                                            snackbarHostState.showSnackbar(
+                                                message = "Failed to submit rating",
+                                                withDismissAction = true
+                                            )
+                                        }
+                                    }
+                                }
+                            } catch (e: Exception) {
+                                withContext(Dispatchers.Main) {
+                                    snackbarHostState.showSnackbar(
+                                        message = "Error submitting rating: ${e.message}",
+                                        withDismissAction = true
+                                    )
+                                }
+                            }
+                        }
+                    },
+                    alertRatingService = alertRatingService
                 )
             }
         }

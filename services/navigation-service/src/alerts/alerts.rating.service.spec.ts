@@ -6,12 +6,14 @@ import { AlertsRatingService } from './alerts.rating.service';
 import { AlertsService } from './alerts.service';
 import { AlertRating } from './entities/alert.rating.entity';
 import { Alert } from './entities/alert.entity';
-import { NotFoundException } from '@nestjs/common';
+import { NotFoundException, ConflictException } from '@nestjs/common';
+import { AlertUserRating } from './entities/alert.user.rating.entity';
 
 describe('AlertsRatingService', () => {
   let service: AlertsRatingService;
   let alertsService: AlertsService;
   let alertRatingRepository: Repository<AlertRating>;
+  let alertUserRatingRepository: Repository<AlertUserRating>;
 
   const mockAlert = {
     id: 1,
@@ -31,7 +33,16 @@ describe('AlertsRatingService', () => {
     alertId: 1,
     upvotes: 5,
     downvotes: 2,
+    alert: mockAlert,
   } as AlertRating;
+
+  const mockUserRating = {
+    id: 1,
+    alertId: 1,
+    userId: 'test-user',
+    isUpvote: true,
+    createdAt: new Date(),
+  } as AlertUserRating;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -52,6 +63,16 @@ describe('AlertsRatingService', () => {
             find: jest.fn(),
           },
         },
+        {
+          provide: getRepositoryToken(AlertUserRating),
+          useValue: {
+            findOne: jest.fn(),
+            create: jest.fn(),
+            save: jest.fn(),
+            remove: jest.fn(),
+            count: jest.fn(),
+          },
+        },
       ],
     }).compile();
 
@@ -59,6 +80,9 @@ describe('AlertsRatingService', () => {
     alertsService = module.get<AlertsService>(AlertsService);
     alertRatingRepository = module.get<Repository<AlertRating>>(
       getRepositoryToken(AlertRating),
+    );
+    alertUserRatingRepository = module.get<Repository<AlertUserRating>>(
+      getRepositoryToken(AlertUserRating),
     );
   });
 
@@ -73,117 +97,137 @@ describe('AlertsRatingService', () => {
         .mockResolvedValue(null as unknown as Alert);
 
       await expect(
-        service.rateAlert({ alertId: 1, isUpvote: true }),
+        service.rateAlert({
+          alertId: 1,
+          isUpvote: true,
+          userId: 'test-user',
+        }),
       ).rejects.toThrow(NotFoundException);
     });
 
     it('should create new rating when none exists', async () => {
       jest.spyOn(alertsService, 'findOne').mockResolvedValue(mockAlert);
-      jest.spyOn(alertRatingRepository, 'findOne').mockResolvedValue(null);
-      jest.spyOn(alertRatingRepository, 'create').mockReturnValue({
-        alertId: 1,
-        upvotes: 1,
-        downvotes: 0,
-      } as AlertRating);
-      jest.spyOn(alertRatingRepository, 'save').mockResolvedValue({
-        id: 1,
-        alertId: 1,
-        upvotes: 1,
-        downvotes: 0,
-      } as AlertRating);
+      jest.spyOn(alertUserRatingRepository, 'findOne').mockResolvedValue(null);
+      jest
+        .spyOn(alertUserRatingRepository, 'create')
+        .mockReturnValue(mockUserRating);
+      jest
+        .spyOn(alertUserRatingRepository, 'save')
+        .mockResolvedValue(mockUserRating);
+      jest
+        .spyOn(alertRatingRepository, 'find')
+        .mockResolvedValue([mockAlertRating]);
 
-      const result = await service.rateAlert({ alertId: 1, isUpvote: true });
-
-      expect(result).toEqual({
-        id: 1,
+      const result = await service.rateAlert({
         alertId: 1,
-        upvotes: 1,
-        downvotes: 0,
+        isUpvote: true,
+        userId: 'test-user',
       });
-      expect(alertRatingRepository.create).toHaveBeenCalledWith({
+
+      expect(result).toEqual([mockAlertRating]);
+      expect(alertUserRatingRepository.create).toHaveBeenCalledWith({
         alertId: 1,
-        upvotes: 1,
-        downvotes: 0,
+        userId: 'test-user',
+        isUpvote: true,
       });
     });
 
-    it('should update existing rating with upvote', async () => {
-      jest
-        .spyOn(alertsService, 'findOne')
-        .mockResolvedValue({ ...mockAlert, ratings: [] });
-      jest
-        .spyOn(alertRatingRepository, 'findOne')
-        .mockResolvedValue({ ...mockAlertRating });
-      jest.spyOn(alertRatingRepository, 'save').mockImplementation((rating) =>
-        Promise.resolve({
-          ...mockAlertRating,
-          ...rating,
-          id: mockAlertRating.id,
-          alert: mockAlert,
-        } as AlertRating),
-      );
+    it('should throw ConflictException when user has already voted the same way', async () => {
+      jest.spyOn(alertsService, 'findOne').mockResolvedValue(mockAlert);
+      jest.spyOn(alertUserRatingRepository, 'findOne').mockResolvedValue({
+        ...mockUserRating,
+        isUpvote: true,
+      });
 
-      const result = await service.rateAlert({ alertId: 1, isUpvote: true });
-
-      expect(result.upvotes).toBe(mockAlertRating.upvotes + 1);
-      expect(result.downvotes).toBe(mockAlertRating.downvotes);
+      await expect(
+        service.rateAlert({
+          alertId: 1,
+          isUpvote: true,
+          userId: 'test-user',
+        }),
+      ).rejects.toThrow(ConflictException);
     });
 
-    it('should update existing rating with downvote', async () => {
+    it('should update existing rating when changing vote', async () => {
+      jest.spyOn(alertsService, 'findOne').mockResolvedValue(mockAlert);
+      jest.spyOn(alertUserRatingRepository, 'findOne').mockResolvedValue({
+        ...mockUserRating,
+        isUpvote: true,
+      });
       jest
-        .spyOn(alertsService, 'findOne')
-        .mockResolvedValue({ ...mockAlert, ratings: [] });
+        .spyOn(alertUserRatingRepository, 'save')
+        .mockImplementation((rating) =>
+          Promise.resolve({
+            ...mockUserRating,
+            ...rating,
+          } as AlertUserRating),
+        );
       jest
-        .spyOn(alertRatingRepository, 'findOne')
-        .mockResolvedValue({ ...mockAlertRating });
-      jest.spyOn(alertRatingRepository, 'save').mockImplementation((rating) =>
-        Promise.resolve({
-          ...mockAlertRating,
-          ...rating,
-          id: mockAlertRating.id,
-          alert: mockAlert,
-        } as AlertRating),
+        .spyOn(alertRatingRepository, 'find')
+        .mockResolvedValue([mockAlertRating]);
+
+      const result = await service.rateAlert({
+        alertId: 1,
+        isUpvote: false,
+        userId: 'test-user',
+      });
+
+      expect(result).toEqual([mockAlertRating]);
+      expect(alertUserRatingRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          alertId: 1,
+          userId: 'test-user',
+          isUpvote: false,
+        }),
       );
-
-      const result = await service.rateAlert({ alertId: 1, isUpvote: false });
-
-      expect(result.upvotes).toBe(mockAlertRating.upvotes);
-      expect(result.downvotes).toBe(mockAlertRating.downvotes + 1);
     });
   });
 
   describe('getAlertRatingsFromAlertId', () => {
     it('should return ratings for a specific alert', async () => {
-      const mockRatings = [mockAlertRating];
-      jest.spyOn(alertRatingRepository, 'find').mockResolvedValue(mockRatings);
+      jest
+        .spyOn(alertUserRatingRepository, 'count')
+        .mockResolvedValueOnce(5) // upvotes
+        .mockResolvedValueOnce(2); // downvotes
+      jest.spyOn(alertsService, 'findOne').mockResolvedValue(mockAlert);
 
       const result = await service.getAlertRatingsFromAlertId(1);
 
-      expect(result).toEqual(mockRatings);
-      expect(alertRatingRepository.find).toHaveBeenCalledWith({
-        where: { alertId: 1 },
+      expect(result).toEqual({
+        alertId: 1,
+        upvotes: 5,
+        downvotes: 2,
+        id: 0,
+        alert: mockAlert,
+      });
+      expect(alertUserRatingRepository.count).toHaveBeenCalledWith({
+        where: { alertId: 1, isUpvote: true },
+      });
+      expect(alertUserRatingRepository.count).toHaveBeenCalledWith({
+        where: { alertId: 1, isUpvote: false },
       });
     });
   });
 
   describe('getAverageAlertRating', () => {
     it('should calculate average rating correctly', async () => {
-      const mockRatings = [
-        { upvotes: 5, downvotes: 2 },
-        { upvotes: 3, downvotes: 1 },
-      ] as AlertRating[];
-      jest.spyOn(alertRatingRepository, 'find').mockResolvedValue(mockRatings);
+      jest
+        .spyOn(alertUserRatingRepository, 'count')
+        .mockResolvedValueOnce(5) // upvotes
+        .mockResolvedValueOnce(2); // downvotes
 
       const result = await service.getAverageAlertRating(1);
 
-      // Total votes: (5+2) + (3+1) = 11
-      // Number of ratings: 2
-      // Average: 11/2 = 5.5
-      expect(result).toBe(5.5);
+      // Total votes: 5 + 2 = 7
+      // Average: 7/2 = 3.5
+      expect(result).toBe(3.5);
     });
 
     it('should return 0 when no ratings exist', async () => {
-      jest.spyOn(alertRatingRepository, 'find').mockResolvedValue([]);
+      jest
+        .spyOn(alertUserRatingRepository, 'count')
+        .mockResolvedValueOnce(0) // upvotes
+        .mockResolvedValueOnce(0); // downvotes
 
       const result = await service.getAverageAlertRating(1);
 

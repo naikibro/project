@@ -1,4 +1,4 @@
-import { IsNumber, IsBoolean } from 'class-validator';
+import { IsNumber, IsBoolean, IsString } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class UpsertAlertRatingDto {
@@ -11,4 +11,10 @@ export class UpsertAlertRatingDto {
   })
   @IsBoolean()
   isUpvote: boolean;
+
+  @ApiProperty({
+    description: 'The ID of the user submitting the rating',
+  })
+  @IsString()
+  userId: string;
 }

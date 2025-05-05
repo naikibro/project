@@ -2,7 +2,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { AlertsRatingGateway } from './alerts.rating.gateway';
 import { AlertsRatingService } from './alerts.rating.service';
-import { UpsertAlertRatingDto } from './dto/upsert-alert.dto';
+import { UpsertAlertRatingDto } from './dto/upsert-alert-rating.dto';
 
 describe('AlertsRatingGateway', () => {
   let gateway: AlertsRatingGateway;
@@ -34,7 +34,11 @@ describe('AlertsRatingGateway', () => {
   });
 
   it('should call rateAlert on service', async () => {
-    const dto: UpsertAlertRatingDto = { alertId: 1, isUpvote: true };
+    const dto: UpsertAlertRatingDto = {
+      alertId: 1,
+      isUpvote: true,
+      userId: '',
+    };
     (service.rateAlert as jest.Mock).mockResolvedValue('result');
     const result = await gateway.rateAlert(dto);
     expect(service.rateAlert).toHaveBeenCalledWith(dto);

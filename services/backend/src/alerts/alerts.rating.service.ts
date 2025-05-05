@@ -1,8 +1,9 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
-import { UpsertAlertRatingDto } from './dto/upsert-alert.dto';
-import { of } from 'rxjs';
+import { UpsertAlertRatingDto } from './dto/upsert-alert-rating.dto';
+import { Observable, of } from 'rxjs';
 import { retry, catchError } from 'rxjs/operators';
+import { AlertRating } from './entities/alert.rating.entity';
 
 @Injectable()
 export class AlertsRatingService {
@@ -21,14 +22,16 @@ export class AlertsRatingService {
     );
   }
 
-  getAlertRatingsFromAlertId(alertId: number) {
-    return this.clientProxy.send('get-alert-ratings', alertId).pipe(
-      retry(3),
-      catchError((err) => {
-        console.error('Failed to get alert ratings:', err);
-        return of(null);
-      }),
-    );
+  getAlertRatingsFromAlertId(alertId: number): Observable<AlertRating[]> {
+    return this.clientProxy
+      .send<AlertRating[]>('get-alert-ratings', alertId)
+      .pipe(
+        retry(3),
+        catchError((err) => {
+          console.error('Failed to get alert ratings:', err);
+          return of([]);
+        }),
+      );
   }
 
   getAverageAlertRating(alertId: number) {

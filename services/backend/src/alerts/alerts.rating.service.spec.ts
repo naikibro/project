@@ -3,7 +3,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { AlertsRatingService } from './alerts.rating.service';
 import { ClientProxy } from '@nestjs/microservices';
 import { of, throwError } from 'rxjs';
-import { UpsertAlertRatingDto } from './dto/upsert-alert.dto';
+import { UpsertAlertRatingDto } from './dto/upsert-alert-rating.dto';
 
 describe('AlertsRatingService', () => {
   let service: AlertsRatingService;

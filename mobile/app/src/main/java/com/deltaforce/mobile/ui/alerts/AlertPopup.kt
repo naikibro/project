@@ -13,6 +13,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.deltaforce.mobile.R
 import com.deltaforce.mobile.network.Alert
+import com.deltaforce.mobile.network.AlertRatingService
+import com.deltaforce.mobile.network.UpsertAlertRatingDto
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.time.Duration
@@ -21,7 +23,9 @@ import java.time.Duration
 @Composable
 fun AlertPopup(
     alert: Alert,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    onRatingSubmit: (UpsertAlertRatingDto) -> Unit,
+    alertRatingService: AlertRatingService
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -100,6 +104,14 @@ fun AlertPopup(
                         )
                     }
                 }
+
+                // Rating box
+                AlertRatingBox(
+                    alert = alert,
+                    onRatingSubmit = onRatingSubmit,
+                    alertRatingService = alertRatingService,
+                    modifier = Modifier.padding(top = 8.dp)
+                )
             }
         }
     )

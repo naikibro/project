@@ -1,5 +1,5 @@
 import { MessagePattern } from '@nestjs/microservices';
-import { UpsertAlertRatingDto } from './dto/upsert-alert.dto';
+import { UpsertAlertRatingDto } from './dto/upsert-alert-rating.dto';
 import { AlertsRatingService } from './alerts.rating.service';
 import { Controller } from '@nestjs/common';
 

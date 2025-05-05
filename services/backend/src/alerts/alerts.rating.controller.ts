@@ -6,7 +6,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { AlertsRatingService } from './alerts.rating.service';
-import { UpsertAlertRatingDto } from './dto/upsert-alert.dto';
+import { UpsertAlertRatingDto } from './dto/upsert-alert-rating.dto';
 import { JwtAuthGuard } from '../auth/jwt/jwt.guard';
 import { Claims } from '../auth/rbac/claims.decorator';
 import { Claim } from '../auth/rbac/claims.enum';
@@ -41,7 +41,10 @@ export class AlertsRatingController {
     @Body() rateAlertDto: UpsertAlertRatingDto,
   ) {
     rateAlertDto.alertId = +id;
-    return this.alertsRatingService.rateAlert(rateAlertDto);
+    // Get the updated rating object after rating
+    this.alertsRatingService.rateAlert(rateAlertDto);
+    // Return the updated rating for this alert
+    return this.alertsRatingService.getAlertRatingsFromAlertId(+id);
   }
 
   @Get(':id/ratings')

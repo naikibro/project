@@ -8,9 +8,10 @@ import { Transport } from '@nestjs/microservices';
 import { AlertsRatingService } from './alerts.rating.service';
 import { AlertsRatingGateway } from './alerts.rating.gateway';
 import { AlertRating } from './entities/alert.rating.entity';
+import { AlertUserRating } from './entities/alert.user.rating.entity';
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Alert, AlertRating]),
+    TypeOrmModule.forFeature([Alert, AlertRating, AlertUserRating]),
     ClientsModule.register([
       {
         name: 'NAVIGATION_SERVICE',
