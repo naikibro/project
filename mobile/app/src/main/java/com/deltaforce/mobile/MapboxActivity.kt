@@ -314,7 +314,7 @@ class MapboxActivity(private val authSession: AuthSessionInterface = AuthSession
                 // Load and tint the Drawable
                 val origDrawable = ContextCompat.getDrawable(this, R.drawable.baseline_location_pin_24)
                     ?: throw IllegalArgumentException("Drawable not found: baseline_location_pin_24")
-                
+
                 val wrapped = DrawableCompat.wrap(origDrawable).mutate()
                 DrawableCompat.setTint(wrapped, tintColor)
 
@@ -344,8 +344,8 @@ class MapboxActivity(private val authSession: AuthSessionInterface = AuthSession
 
     @RequiresApi(Build.VERSION_CODES.O)
     private fun MapView.setupMapClickListener() {
+        // Set up click listener for point annotations
         alertAnnotationManager?.addClickListener(OnPointAnnotationClickListener { annotation ->
-
             // Find the corresponding alert for this annotation
             val clickedPoint = annotation.point
             val matchingAlert = nearbyAlerts.value.find { alert ->
@@ -379,31 +379,43 @@ class MapboxActivity(private val authSession: AuthSessionInterface = AuthSession
             // Check if the click was on an annotation
             var clickedAlert: Alert? = null
 
-            // 2) any { … } must return true/false for each alert
-            val clickedOnAnnotation = nearbyAlerts.value.any { alert ->
+            // Find the closest annotation within a reasonable distance
+            nearbyAlerts.value.forEach { alert ->
                 val alertPoint = Point.fromLngLat(
                     (alert.coordinates["longitude"] as Number).toDouble(),
-                    (alert.coordinates["latitude"]  as Number).toDouble()
+                    (alert.coordinates["latitude"] as Number).toDouble()
                 )
-                val dx = point.longitude() - alertPoint.longitude()
-                val dy = point.latitude()  - alertPoint.latitude()
+                
+                // Convert points to screen coordinates for more accurate distance calculation
+                val clickedScreenPoint = mapboxMap.pixelForCoordinate(point)
+                val alertScreenPoint = mapboxMap.pixelForCoordinate(alertPoint)
+                
+                // Calculate distance in screen coordinates
+                val dx = clickedScreenPoint.x - alertScreenPoint.x
+                val dy = clickedScreenPoint.y - alertScreenPoint.y
                 val distance = sqrt(dx.pow(2) + dy.pow(2))
 
-                if (distance < 0.0001) {
-                    clickedAlert = alert  // capture which one
-                    true                   // signal "this alert was clicked"
-                } else {
-                    false
+                // Use a reasonable threshold in screen pixels
+                if (distance < 48.0) { // 48 pixels is a good touch target size
+                    clickedAlert = alert
                 }
             }
 
-            if (!clickedOnAnnotation) {
+            if (clickedAlert == null) {
                 cancelNavigation()
                 calculateRouteToDestination(point)
             } else {
-                clickedAlert?.let { alert ->
-                    selectedAlert.value = alert
-                }
+                selectedAlert.value = clickedAlert
+                // Center the map on the clicked annotation
+                mapboxMap.easeTo(
+                    CameraOptions.Builder()
+                        .center(point)
+                        .zoom(15.0)
+                        .build(),
+                    MapAnimationOptions.Builder()
+                        .duration(1000)
+                        .build()
+                )
             }
 
             true
