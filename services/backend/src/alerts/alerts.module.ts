@@ -3,13 +3,16 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AlertsService } from './alerts.service';
 import { AlertsController } from './alerts.controller';
 import { Alert } from './entities/alert.entity';
+import { AlertRating } from './entities/alert.rating.entity';
+import { AlertsRatingService } from './alerts.rating.service';
+import { AlertsRatingController } from './alerts.rating.controller';
 import { ClientsModule } from '@nestjs/microservices';
 import { Transport } from '@nestjs/microservices';
 
 @Module({
-  controllers: [AlertsController],
+  controllers: [AlertsController, AlertsRatingController],
   imports: [
-    TypeOrmModule.forFeature([Alert]),
+    TypeOrmModule.forFeature([Alert, AlertRating]),
     ClientsModule.register([
       {
         name: 'NAVIGATION_SERVICE',
@@ -22,6 +25,6 @@ import { Transport } from '@nestjs/microservices';
       },
     ]),
   ],
-  providers: [AlertsService],
+  providers: [AlertsService, AlertsRatingService],
 })
 export class AlertsModule {}

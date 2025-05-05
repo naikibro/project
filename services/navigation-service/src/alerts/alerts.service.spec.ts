@@ -29,6 +29,7 @@ describe('AlertsService', () => {
       region: undefined,
       country: undefined,
     },
+    ratings: [],
   };
 
   const mockCreateAlertDto: CreateAlertDto = {

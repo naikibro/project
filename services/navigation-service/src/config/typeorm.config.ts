@@ -2,6 +2,7 @@ import { TypeOrmModuleOptions } from '@nestjs/typeorm';
 import * as dotenv from 'dotenv';
 import { DataSource } from 'typeorm';
 import { Alert } from '../alerts/entities/alert.entity';
+import { AlertRating } from '../alerts/entities/alert.rating.entity';
 
 dotenv.config({
   path: process.env.NODE_ENV === 'production' ? '.env.production' : '.env',
@@ -13,13 +14,13 @@ export const typeOrmConfig: TypeOrmModuleOptions = {
   autoLoadEntities: true,
   synchronize: true,
   logging: true,
-  entities: [Alert],
+  entities: [Alert, AlertRating],
 };
 
 export const dataSource = new DataSource({
   type: 'postgres',
   url: process.env.POSTGRES_URI,
-  entities: [Alert],
+  entities: [Alert, AlertRating],
   migrations: [__dirname + '/../database/migrations/*{.ts,.js}'],
   synchronize: true,
 });
