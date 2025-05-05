@@ -1,19 +1,23 @@
-import { playfair } from "src/themes/fonts";
+import { Button, Typography } from "@mui/material";
 
 export default function Hero() {
   return (
     <section
       aria-label="hero-section"
-      className="text-center mt-0 mb-32 mx-4 sm:mx-8 md:mx-16 lg:mx-24"
+      className="flex flex-col items-center justify-center text-center p-4 sm:p-6 md:p-8"
     >
-      <h1
-        className={`text-xl sm:text-3xl md:text-5xl lg:text-6xl xl:text-7xl tracking-tighter mb-6 ${playfair.variable} font-serif`}
-      >
-        The best website in the world
-      </h1>
-      <p className="text-xl text-gray-600 dark:text-gray-300 mb-12 font-light">
-        Discover the best things around you. Do it now, do it today!
-      </p>
+      <Typography variant="h2" fontWeight="bold">
+        SUPMAP
+      </Typography>
+      <Typography variant="h6" color="text.secondary" sx={{ mt: 2 }}>
+        The best navigation app in the world
+      </Typography>
+      <div className="flex flex-col sm:flex-row gap-4 mt-4">
+        <Button variant="contained" color="primary">
+          Get Started
+        </Button>
+        <Button variant="outlined">Learn More</Button>
+      </div>
     </section>
   );
 }

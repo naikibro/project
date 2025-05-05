@@ -1,0 +1,134 @@
+package com.deltaforce.mobile.network
+
+import retrofit2.Call
+import retrofit2.Retrofit
+import retrofit2.converter.gson.GsonConverterFactory
+import retrofit2.http.Body
+import retrofit2.http.GET
+import retrofit2.http.POST
+import com.deltaforce.mobile.BuildConfig
+
+
+data class SignUpRequest(
+    val username: String,
+    val email: String,
+    val password: String,
+    val acceptedTerms: Boolean,
+    val acceptedPrivacyPolicy: Boolean
+)
+
+data class SignUpResponse(
+    val accessToken: String
+)
+
+data class SignInRequest(
+    val email: String,
+    val password: String
+)
+
+data class Role(
+    val id: Int,
+    val name: String
+)
+
+data class User(
+    val id: String,
+    val username: String,
+    val email: String,
+    val role: Role,
+    val profilePicture: String? = null,
+    val googleId: String? = null
+)
+
+data class SignInResponse(
+    val accessToken: String,
+    val user: User
+)
+
+data class ForgotPasswordRequest(
+    val email: String
+)
+
+data class ForgotPasswordResponse(
+    val message: String
+)
+
+data class ResetPasswordRequest(
+    val token: String,
+    val newPassword: String
+)
+
+data class ResetPasswordResponse(
+    val message: String
+)
+
+data class GoogleAuthResponse(
+    val accessToken: String,
+    val user: User
+)
+
+data class GoogleMobileAuthRequest(
+    val idToken: String
+)
+
+interface AuthApi {
+    @POST("auth/signup")
+    fun signUp(@Body signUpRequest: SignUpRequest): Call<SignUpResponse>
+
+    @POST("auth/signin")
+    fun signIn(@Body signInRequest: SignInRequest): Call<SignInResponse>
+
+    @POST("auth/forgot-password")
+    fun forgotPassword(@Body request: ForgotPasswordRequest): Call<ForgotPasswordResponse>
+
+    @POST("auth/reset-password")
+    fun resetPassword(@Body request: ResetPasswordRequest): Call<ResetPasswordResponse>
+
+    @GET("auth/google")
+    fun initiateGoogleAuth(): Call<Unit>
+
+    @GET("auth/google/callback")
+    fun handleGoogleAuthCallback(): Call<GoogleAuthResponse>
+
+    @POST("auth/google/mobile")
+    fun handleGoogleMobileAuth(@Body request: GoogleMobileAuthRequest): Call<GoogleAuthResponse>
+}
+
+class AuthApiService(private val authApi: AuthApi? = null, baseUrl: String = BuildConfig.API_URL) {
+
+    private val api: AuthApi = authApi ?: run {
+        val retrofit: Retrofit = Retrofit.Builder()
+            .baseUrl(baseUrl)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+        retrofit.create(AuthApi::class.java)
+    }
+
+    fun signUp(signUpRequest: SignUpRequest): Call<SignUpResponse> {
+        return api.signUp(signUpRequest)
+    }
+
+    fun signIn(signInRequest: SignInRequest): Call<SignInResponse> {
+        return api.signIn(signInRequest)
+    }
+
+    fun forgotPassword(request: ForgotPasswordRequest): Call<ForgotPasswordResponse> {
+        return api.forgotPassword(request)
+    }
+
+    fun resetPassword(request: ResetPasswordRequest): Call<ResetPasswordResponse> {
+        return api.resetPassword(request)
+    }
+
+    fun initiateGoogleAuth(): Call<Unit> {
+        return api.initiateGoogleAuth()
+    }
+
+    fun handleGoogleAuthCallback(): Call<GoogleAuthResponse> {
+        return api.handleGoogleAuthCallback()
+    }
+
+    fun handleGoogleMobileAuth(idToken: String): Call<GoogleAuthResponse> {
+        return api.handleGoogleMobileAuth(GoogleMobileAuthRequest(idToken))
+    }
+}

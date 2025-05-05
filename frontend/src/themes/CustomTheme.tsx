@@ -6,10 +6,17 @@ const theme = createTheme({
       main: "#000000",
       contrastText: "#ffffff",
     },
-
     secondary: {
-      main: "#ffffff",
-      contrastText: "#000000",
+      main: "#4f46e5", // A vibrant indigo color
+      contrastText: "#ffffff",
+    },
+    error: {
+      main: "#ef4444", // A vibrant red color
+      contrastText: "#ffffff",
+    },
+    success: {
+      main: "#22c55e", // A vibrant green color
+      contrastText: "#ffffff",
     },
   },
   components: {

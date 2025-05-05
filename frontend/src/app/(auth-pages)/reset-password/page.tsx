@@ -3,11 +3,11 @@ import { Box, Button, Paper, TextField, Typography } from "@mui/material";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import logo from "public/images/logo-full-black.png";
-import React, { useState } from "react";
+import logo from "public/img/logo-full.png";
+import React, { Suspense, useState } from "react";
 import toast from "react-hot-toast";
 
-export default function ResetPasswordPage() {
+function ResetPasswordContent() {
   const [email, setEmail] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -186,5 +186,13 @@ export default function ResetPasswordPage() {
         </Paper>
       </Box>
     </Box>
+  );
+}
+
+export default function ResetPasswordPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <ResetPasswordContent />
+    </Suspense>
   );
 }
