@@ -28,6 +28,7 @@ describe('AlertsGateway', () => {
       region: undefined,
       country: undefined,
     },
+    ratings: [],
   };
 
   const mockCreateAlertDto: CreateAlertDto = {

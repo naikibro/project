@@ -1,6 +1,7 @@
 import { ApiProperty, ApiTags } from '@nestjs/swagger';
-import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, PrimaryGeneratedColumn, OneToMany } from 'typeorm';
 import { AlertType } from './alert.type';
+import { AlertRating } from './alert.rating.entity';
 
 @ApiTags('Alerts')
 @Entity('alerts')
@@ -88,4 +89,8 @@ export class Alert {
   @Column()
   @ApiProperty({ description: 'The date of the alert' })
   date: Date;
+
+  @OneToMany(() => AlertRating, (rating) => rating.alert)
+  @ApiProperty({ description: 'The ratings for this alert' })
+  ratings: AlertRating[];
 }

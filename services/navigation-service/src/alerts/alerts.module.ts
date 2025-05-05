@@ -5,10 +5,12 @@ import { Alert } from './entities/alert.entity';
 import { AlertsGateway } from './alerts.gateway';
 import { ClientsModule } from '@nestjs/microservices';
 import { Transport } from '@nestjs/microservices';
-
+import { AlertsRatingService } from './alerts.rating.service';
+import { AlertsRatingGateway } from './alerts.rating.gateway';
+import { AlertRating } from './entities/alert.rating.entity';
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Alert]),
+    TypeOrmModule.forFeature([Alert, AlertRating]),
     ClientsModule.register([
       {
         name: 'NAVIGATION_SERVICE',
@@ -21,8 +23,8 @@ import { Transport } from '@nestjs/microservices';
       },
     ]),
   ],
-  controllers: [AlertsGateway],
-  providers: [AlertsService],
-  exports: [AlertsService],
+  controllers: [AlertsGateway, AlertsRatingGateway],
+  providers: [AlertsService, AlertsRatingService],
+  exports: [AlertsService, AlertsRatingService],
 })
 export class AlertsModule {}
