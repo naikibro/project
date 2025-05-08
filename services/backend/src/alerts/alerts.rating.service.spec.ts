@@ -66,13 +66,13 @@ describe('AlertsRatingService', () => {
     });
   });
 
-  it('getAlertRatingsFromAlertId should handle errors and return null', (done) => {
+  it('getAlertRatingsFromAlertId should handle errors and return empty array', (done) => {
     (clientProxy.send as jest.Mock).mockReturnValue(
       throwError(() => new Error('fail')),
     );
 
     service.getAlertRatingsFromAlertId(42).subscribe((result) => {
-      expect(result).toBeNull();
+      expect(result).toEqual([]);
       done();
     });
   });
