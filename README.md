@@ -1,5 +1,6 @@
-![supmap-logo](https://k7hfcl3c2m0luhwe.public.blob.vercel-storage.com/bg-1u8HSJiRjzLmq1caKGvE8S2e8qEMmX.gif)
+![logo supmap](https://github.com/user-attachments/assets/854b1ac4-68c0-4db6-aecf-3a0edc01c4a1)
 
+  
 # Supmap
 
 an [MIT licensed project](./LICENSE)
