@@ -29,6 +29,8 @@ Supmap is a real-time navigation and community-driven traffic alert application 
   </a>
 </div>
 
+You can also find the mobile app apk [here](./supmap-mobile-app.apk)
+
 ## Architecture overview
 
 ```mermaid
@@ -51,6 +53,12 @@ A2 <--> C
 ```
 
 You will find more informations about the cloud deployment of the project in the [DEPLOY.md](./DEPLOY.md)
+
+| Service        | Local URL                               | Production URL                                       | Description                        |
+| -------------- | --------------------------------------- | ---------------------------------------------------- | ---------------------------------- |
+| Frontend       | [localhost:3000](http://localhost:3000) | [supmap.fr](https://supmap.fr)                       | Web application dashboard          |
+| Auth API       | [localhost:4001](http://localhost:4001) | [api.supmap.fr](https://api.supmap.fr)               | User authentication and management |
+| Navigation API | [localhost:4002](http://localhost:4002) | [navigation.supmap.fr](https://navigation.supmap.fr) | Route calculation and traffic data |
 
 ## Run the project
 
@@ -75,6 +83,18 @@ docker compose up --build -d
 ```
 
 ---
+
+## About the tests
+
+Our project uses a comprehensive CI/CD pipeline to ensure code quality and reliability:
+
+- **Automated Testing**: Unit tests, integration tests, and end-to-end tests are run automatically on every pull request
+- **Code Quality**: ESLint and Prettier are used to maintain consistent code style
+- **Security Scanning**: Dependencies are regularly scanned for vulnerabilities
+- **Build Verification**: All services are built and verified in the CI environment
+- **Deployment**: Successful builds are automatically deployed to staging environment
+
+The CI/CD pipeline is configured using GitHub Actions and can be found in the `.github/workflows` directory.
 
 ## Features
 
