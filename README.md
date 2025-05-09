@@ -1,10 +1,19 @@
-![logo supmap](https://github.com/user-attachments/assets/854b1ac4-68c0-4db6-aecf-3a0edc01c4a1)
+![logo supmap](./docs/img/bg.gif)
 
 # Supmap
 
 an [MIT licensed project](./LICENSE)
 
 Supmap is a real-time navigation and community-driven traffic alert application inspired by Waze. It enables users to navigate with optimized routes, receive and report live incidents (accidents, traffic jams, road closures, police controls, obstacles), and contribute to the reliability of alerts through community validation. Supmap features a mobile app for navigation and reporting, a web dashboard for data management, and a scalable microservices backend, all focused on improving travel in France.
+
+## Ressources and useful links
+
+| Resource         | Link                                                                                                 |
+| ---------------- | ---------------------------------------------------------------------------------------------------- |
+| 📦 Repository    | [git@github.com:SUPMAP-DELTA-FORCE/supmap.git](https://github.com/SUPMAP-DELTA-FORCE/supmap)         |
+| 👥 Organization  | [SUPMAP-DELTA-FORCE](https://github.com/SUPMAP-DELTA-FORCE)                                          |
+| 📚 Documentation | [Google Drive](https://drive.google.com/drive/folders/1zssof3ScdPpFf2q76ud1qlZG4JHQew-u?usp=sharing) |
+| 💬 Discord       | [Join our community](https://discord.gg/8jjrztYUTZ)                                                  |
 
 ## Tech stack
 
@@ -13,6 +22,12 @@ Supmap is a real-time navigation and community-driven traffic alert application 
     <img src="https://skillicons.dev/icons?i=docker,nest,next,androidstudio,kotlin,postgres,rabbitmq" />
   </a>
 </p>
+
+<div align="center">
+  <a href="https://k7hfcl3c2m0luhwe.public.blob.vercel-storage.com/app-release-KpHBqJCnulgGYCzUkNtPbpuHxwjdaW.apk">
+    <img src="https://img.shields.io/badge/Download-Android_App-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Download Android App"/>
+  </a>
+</div>
 
 ## Architecture overview
 
@@ -81,8 +96,8 @@ docker compose up --build -d
 | **Data Encryption (at rest & in transit)**    | ✅     | HTTPS enforced, sensitive data encrypted in DB                         |
 | **Protection against XSS/CSRF/SQL Injection** | ✅     | Standard web security practices                                        |
 | **Efficient Data Storage**                    | ✅     | Scalable DB for incidents, routes, traffic                             |
-| **Traffic Data Analysis/Statistics**          | 🚧     | Basic stats available, advanced analytics in progress                  |
-| **Traffic Jam Prediction (historical data)**  | 🚧     | Daily data pipeline to predict regional traffic                        |
+| **Traffic Data Analysis/Statistics**          | ✅     | Basic stats available, advanced analytics in progress                  |
+| **Traffic Jam Prediction (historical data)**  | ✅     | Daily data pipeline to predict regional traffic                        |
 | **Containerized Deployment (docker-compose)** | ✅     | All services deployable via docker-compose                             |
 | **Documentation (Technical & User)**          | ✅     | README, setup, and user guide provided                                 |
 
