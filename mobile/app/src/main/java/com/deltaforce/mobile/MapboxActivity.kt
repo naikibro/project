@@ -131,7 +131,6 @@ import com.mapbox.maps.plugin.annotation.generated.PointAnnotationManager
 import com.mapbox.maps.plugin.annotation.generated.PointAnnotationOptions
 import com.mapbox.maps.plugin.annotation.generated.createPointAnnotationManager
 import com.deltaforce.mobile.network.AlertRatingService
-
 import android.view.View
 import com.mapbox.navigation.core.formatter.MapboxDistanceFormatter
 import com.mapbox.navigation.tripdata.maneuver.api.MapboxManeuverApi
@@ -192,6 +191,10 @@ class MapboxActivity(private val authSession: AuthSessionInterface = AuthSession
     private val alertRatingService: AlertRatingService by lazy {
         AlertRatingService(tokenProvider = { authSession.accessToken })
     }
+
+    // Store the current set of navigation routes (primary + alternatives)
+    private var currentNavigationRoutes: List<NavigationRoute> = emptyList()
+    private var selectedRouteIndex: Int = 0
 
     // ===== Lifecycle Methods =====
 
@@ -406,48 +409,24 @@ class MapboxActivity(private val authSession: AuthSessionInterface = AuthSession
 
         // Only handle map clicks if they're not on an annotation
         mapboxMap.addOnMapClickListener { point ->
-            // Check if the click was on an annotation
-            var clickedAlert: Alert? = null
-
-            // Find the closest annotation within a reasonable distance
-            nearbyAlerts.value.forEach { alert ->
-                val alertPoint = Point.fromLngLat(
-                    (alert.coordinates["longitude"] as Number).toDouble(),
-                    (alert.coordinates["latitude"] as Number).toDouble()
-                )
-                
-                // Convert points to screen coordinates for more accurate distance calculation
-                val clickedScreenPoint = mapboxMap.pixelForCoordinate(point)
-                val alertScreenPoint = mapboxMap.pixelForCoordinate(alertPoint)
-                
-                // Calculate distance in screen coordinates
-                val dx = clickedScreenPoint.x - alertScreenPoint.x
-                val dy = clickedScreenPoint.y - alertScreenPoint.y
-                val distance = sqrt(dx.pow(2) + dy.pow(2))
-
-                // Use a reasonable threshold in screen pixels
-                if (distance < 48.0) { // 48 pixels is a good touch target size
-                    clickedAlert = alert
+            // If there are multiple routes, cycle to the next one as primary
+            if (currentNavigationRoutes.size > 1) {
+                selectedRouteIndex = (selectedRouteIndex + 1) % currentNavigationRoutes.size
+                val reordered = currentNavigationRoutes.toMutableList()
+                // Move selected route to front
+                val selected = reordered.removeAt(selectedRouteIndex)
+                Log.d("ROUTES", "User selected route index $selectedRouteIndex as primary")
+                mapboxNavigation.setNavigationRoutes(reordered)
+                routeLineApi?.setNavigationRoutes(reordered) { value ->
+                    mapView?.mapboxMap?.style?.apply {
+                        routeLineView?.renderRouteDrawData(this, value)
+                    }
                 }
-            }
-
-            if (clickedAlert == null) {
+            } else {
+                // Fallback: original behavior
                 cancelNavigation()
                 calculateRouteToDestination(point)
-            } else {
-                selectedAlert.value = clickedAlert
-                // Center the map on the clicked annotation
-                mapboxMap.easeTo(
-                    CameraOptions.Builder()
-                        .center(point)
-                        .zoom(15.0)
-                        .build(),
-                    MapAnimationOptions.Builder()
-                        .duration(1000)
-                        .build()
-                )
             }
-
             true
         }
     }
@@ -490,7 +469,7 @@ class MapboxActivity(private val authSession: AuthSessionInterface = AuthSession
         fusedLocationClient.lastLocation.addOnSuccessListener { lastLocation ->
             if (lastLocation != null) {
                 val origin = Point.fromLngLat(lastLocation.longitude, lastLocation.latitude)
-                requestRoute(origin, destination)
+                requestMultipleRoutes(origin, destination)
             } else {
                 handleLocationError()
             }
@@ -498,6 +477,47 @@ class MapboxActivity(private val authSession: AuthSessionInterface = AuthSession
             Log.e("MapboxActivity", "Error getting location", e)
             showRouteError()
         }
+    }
+
+    // Request up to 3 alternative routes
+    private fun requestMultipleRoutes(origin: Point, destination: Point) {
+        mapboxNavigation.requestRoutes(
+            RouteOptions.builder()
+                .applyDefaultNavigationOptions()
+                .coordinatesList(listOf(origin, destination))
+                .alternatives(true) // Ask for alternatives
+                .build(),
+            object : NavigationRouterCallback {
+                override fun onCanceled(routeOptions: RouteOptions, routerOrigin: String) {
+                    Log.e("MapboxActivity", "Route calculation canceled")
+                    showRouteError()
+                }
+                override fun onFailure(reasons: List<RouterFailure>, routeOptions: RouteOptions) {
+                    Log.e("MapboxActivity", "Route calculation failed: \\${reasons.joinToString()}")
+                    showRouteError()
+                }
+                override fun onRoutesReady(routes: List<NavigationRoute>, routerOrigin: String) {
+                    if (routes.isEmpty()) {
+                        showRouteError()
+                        return
+                    }
+                    // Limit to 3 routes (primary + 2 alternatives)
+                    val limitedRoutes = routes.take(3)
+                    Log.d("ROUTES", "Initial routes received: \\${limitedRoutes.size}")
+                    currentNavigationRoutes = limitedRoutes // <-- Store all routes
+                    selectedRouteIndex = 0 // Always start with the first as primary
+
+                    // Draw all routes
+                    routeLineApi?.setNavigationRoutes(limitedRoutes) { value ->
+                        mapView?.mapboxMap?.style?.apply {
+                            routeLineView?.renderRouteDrawData(this, value)
+                        }
+                    }
+                    // Start navigation with all routes (primary + alternatives)
+                    startNavigation(limitedRoutes)
+                }
+            }
+        )
     }
 
     private fun hasLocationPermission(): Boolean {
@@ -1003,15 +1023,15 @@ class MapboxActivity(private val authSession: AuthSessionInterface = AuthSession
         }
 
     private val routesObserver = RoutesObserver { routeUpdateResult ->
-        if (routeUpdateResult.navigationRoutes.isNotEmpty()) {
-            routeLineApi?.setNavigationRoutes(routeUpdateResult.navigationRoutes) { value ->
+        val routes = routeUpdateResult.navigationRoutes
+        if (routes.isNotEmpty()) {
+            currentNavigationRoutes = routes // <-- Always update
+            selectedRouteIndex = 0 // Optionally reset to primary
+            routeLineApi?.setNavigationRoutes(routes) { value ->
                 mapView?.mapboxMap?.style?.apply {
                     routeLineView?.renderRouteDrawData(this, value)
                 }
             }
-            viewportDataSource?.onRouteChanged(routeUpdateResult.navigationRoutes.first())
-            viewportDataSource?.evaluate()
-            navigationCamera?.requestNavigationCameraToOverview()
         }
     }
 
