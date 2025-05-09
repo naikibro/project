@@ -135,6 +135,10 @@ import android.view.View
 import com.mapbox.navigation.core.formatter.MapboxDistanceFormatter
 import com.mapbox.navigation.tripdata.maneuver.api.MapboxManeuverApi
 import com.mapbox.navigation.ui.components.maneuver.view.MapboxManeuverView
+import com.mapbox.maps.viewannotation.ViewAnnotationManager
+import com.mapbox.navigation.ui.maps.route.callout.api.DefaultRouteCalloutAdapter
+import com.mapbox.navigation.ui.maps.route.callout.model.DefaultRouteCalloutAdapterOptions
+import com.mapbox.navigation.ui.maps.route.callout.model.RouteCalloutType
 
 class MapboxActivity(private val authSession: AuthSessionInterface = AuthSession) : ComponentActivity() {
     // ===== Properties =====
@@ -451,9 +455,26 @@ class MapboxActivity(private val authSession: AuthSessionInterface = AuthSession
         )
     }
 
+    @OptIn(ExperimentalPreviewMapboxNavigationAPI::class)
     private fun setupRouteLine() {
-        routeLineApi = MapboxRouteLineApi(MapboxRouteLineApiOptions.Builder().build())
+        // Enable route callouts in the API options
+        val routeLineApiOptions = MapboxRouteLineApiOptions.Builder()
+            .isRouteCalloutsEnabled(true)
+            .build()
+        routeLineApi = MapboxRouteLineApi(routeLineApiOptions)
         routeLineView = MapboxRouteLineView(MapboxRouteLineViewOptions.Builder(this).build())
+
+        // Set up the default callout adapter
+        val viewAnnotationManager: ViewAnnotationManager? = mapView?.viewAnnotationManager
+        if (viewAnnotationManager != null) {
+            val defaultAdapter = DefaultRouteCalloutAdapter(this)
+            // Optionally customize callout appearance/type
+            val calloutOptions = DefaultRouteCalloutAdapterOptions.Builder()
+                .routeCalloutType(RouteCalloutType.NAVIGATION)
+                .build()
+            defaultAdapter.updateOptions(calloutOptions)
+            routeLineView?.setCalloutAdapter(viewAnnotationManager, defaultAdapter)
+        }
     }
 
     // ===== Navigation Control Methods =====
