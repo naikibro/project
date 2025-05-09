@@ -17,7 +17,9 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -130,6 +132,11 @@ import com.mapbox.maps.plugin.annotation.generated.PointAnnotationOptions
 import com.mapbox.maps.plugin.annotation.generated.createPointAnnotationManager
 import com.deltaforce.mobile.network.AlertRatingService
 
+import android.view.View
+import com.mapbox.navigation.core.formatter.MapboxDistanceFormatter
+import com.mapbox.navigation.tripdata.maneuver.api.MapboxManeuverApi
+import com.mapbox.navigation.ui.components.maneuver.view.MapboxManeuverView
+
 class MapboxActivity(private val authSession: AuthSessionInterface = AuthSession) : ComponentActivity() {
     // ===== Properties =====
 
@@ -151,6 +158,10 @@ class MapboxActivity(private val authSession: AuthSessionInterface = AuthSession
     private var destinationPoint: Point? = null
     private var coroutineScope: CoroutineScope? = null
     private var searchEngine: SearchEngine? = null
+
+    // Maneuver Components
+    private var maneuverApi: MapboxManeuverApi? = null
+    private var maneuverView: MapboxManeuverView? = null
 
     // State Management
     private val isBottomSheetVisible = MutableStateFlow(false)
@@ -252,7 +263,17 @@ class MapboxActivity(private val authSession: AuthSessionInterface = AuthSession
         setupViewportDataSource()
         setupNavigationCamera()
         setupRouteLine()
+        setupManeuverComponents()
         updateCurrentLocation()
+    }
+
+    private fun setupManeuverComponents() {
+        val distanceFormatterOptions = DistanceFormatterOptions.Builder(this).build()
+        val distanceFormatter = MapboxDistanceFormatter(distanceFormatterOptions)
+        maneuverApi = MapboxManeuverApi(distanceFormatter)
+        maneuverView = MapboxManeuverView(this).apply {
+            visibility = View.GONE
+        }
     }
 
     @RequiresApi(Build.VERSION_CODES.O)
@@ -534,6 +555,9 @@ class MapboxActivity(private val authSession: AuthSessionInterface = AuthSession
         mapboxNavigation.setNavigationRoutes(routes)
         isNavigating.value = true
 
+        // Show maneuver view when navigation starts
+        maneuverView?.visibility = View.VISIBLE
+
         registerNavigationObservers()
         startNavigationSession()
         updateCameraForNavigation()
@@ -581,6 +605,9 @@ class MapboxActivity(private val authSession: AuthSessionInterface = AuthSession
         stopNavigationSession()
         clearNavigationState()
         clearRouteLine()
+
+        // Hide maneuver view when navigation is cancelled
+        maneuverView?.visibility = View.GONE
     }
 
     private fun unregisterNavigationObservers() {
@@ -827,21 +854,36 @@ class MapboxActivity(private val authSession: AuthSessionInterface = AuthSession
                 )
             }
 
-            DestinationBottomSheet()
+            // Top-aligned column for navigation UI
             if (isNavigatingState.value) {
-                NavigationSnackbar(
-                    distanceInMeters = routeProgressState.value?.distanceRemaining ?: 0,
-                    onCancelNavigation = { cancelNavigation() },
-                    onAlert = {
-                        isAlertModalVisible.value = true
-                    },
+                Column(
                     modifier = Modifier
-                        .align(Alignment.TopStart)
-                        .padding(16.dp),
-                    origin = currentPoint!!,
-                    destination = destinationPoint!!,
-                )
-            } else {
+                        .align(Alignment.TopCenter)
+                        .fillMaxWidth()
+                        .padding(top = 16.dp, start = 16.dp, end = 16.dp)
+                ) {
+                    NavigationSnackbar(
+                        distanceInMeters = routeProgressState.value?.distanceRemaining ?: 0,
+                        onCancelNavigation = { cancelNavigation() },
+                        onAlert = { isAlertModalVisible.value = true },
+                        modifier = Modifier.fillMaxWidth(),
+                        origin = currentPoint!!,
+                        destination = destinationPoint!!,
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    maneuverView?.let { view ->
+                        AndroidView(
+                            factory = { view },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(96.dp)
+                        )
+                    }
+                }
+            }
+
+            DestinationBottomSheet()
+            if (!isNavigatingState.value) {
                 SnackbarHost(
                     hostState = snackbarHostState,
                     modifier = Modifier.align(Alignment.Center)
@@ -854,7 +896,6 @@ class MapboxActivity(private val authSession: AuthSessionInterface = AuthSession
                 displayCurrentLocationPuck()
                 updateAlertAnnotations()
             }
-
 
             alert?.let {
                 AlertPopup(
@@ -1015,6 +1056,12 @@ class MapboxActivity(private val authSession: AuthSessionInterface = AuthSession
     @SuppressLint("MissingPermission")
     private val routeProgressObserver =
         RouteProgressObserver { routeProgress ->
+            maneuverApi?.getManeuvers(routeProgress)?.let { maneuvers ->
+                Log.d("MANEUVER", "Maneuvers: $maneuvers")
+                maneuverView?.renderManeuvers(maneuvers)
+                maneuverView?.visibility = View.VISIBLE
+            }
+
             Log.d("ROUTE_PROGRESS", "Distance remaining: ${routeProgress.distanceRemaining}")
             currentRouteProgress.value = routeProgress
 
