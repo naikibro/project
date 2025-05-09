@@ -27,6 +27,33 @@ services:
     env_file:
       - .env
 
+  db-navigation:
+    image: postgres:15-alpine
+    container_name: ${NAVIGATION_SERVICE_DATABASE_CONTAINER_NAME}
+    ports:
+      - "${NAVIGATION_SERVICE_DATABASE_PORT}:5432"
+    environment:
+      POSTGRES_USER: ${NAVIGATION_SERVICE_DATABASE_USER}
+      POSTGRES_PASSWORD: ${NAVIGATION_SERVICE_DATABASE_PASSWORD}
+      POSTGRES_DB: ${NAVIGATION_SERVICE_DATABASE_NAME}
+    env_file:
+      - .env
+    networks:
+      - app-network
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "pg_isready",
+          "-U",
+          "${NAVIGATION_SERVICE_DATABASE_USER}",
+          "-d",
+          "${NAVIGATION_SERVICE_DATABASE_NAME}",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   # ----- T E S T   D A T A B A S E S -----
   db-test-auth:
     image: postgres:15-alpine
@@ -39,6 +66,33 @@ services:
       POSTGRES_DB: ${AUTH_SERVICE_TEST_DATABASE_NAME}
     env_file:
       - .env
+
+  db-test-navigation:
+    image: postgres:15-alpine
+    container_name: ${NAVIGATION_SERVICE_TEST_DATABASE_CONTAINER_NAME}
+    ports:
+      - "${NAVIGATION_SERVICE_TEST_DATABASE_PORT}:5432"
+    environment:
+      POSTGRES_USER: ${NAVIGATION_SERVICE_TEST_DATABASE_USER}
+      POSTGRES_PASSWORD: ${NAVIGATION_SERVICE_TEST_DATABASE_PASSWORD}
+      POSTGRES_DB: ${NAVIGATION_SERVICE_TEST_DATABASE_NAME}
+    env_file:
+      - .env
+    networks:
+      - app-network
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "pg_isready",
+          "-U",
+          "${NAVIGATION_SERVICE_TEST_DATABASE_USER}",
+          "-d",
+          "${NAVIGATION_SERVICE_TEST_DATABASE_NAME}",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   # ----- M I N I O -----
   minio:
@@ -86,17 +140,35 @@ services:
       - app-network
     environment:
       - NODE_ENV=dev
+      - PORT=${AUTH_SERVICE_PORT}
+      - PROJECT_NAME=${AUTH_SERVICE_DOCUMENTATION_TITLE}
+      - FRONTEND_URL=${FRONTEND_URL}
+      - RABBITMQ_URL=${RABBITMQ_URL}
       - POSTGRES_URI=${AUTH_SERVICE_POSTGRES_URI}
       - POSTGRES_TEST_URI=${AUTH_SERVICE_TEST_POSTGRES_URI}
-      - FRONTEND_URL=${FRONTEND_URL}
-      - PROJECT_NAME=${AUTH_SERVICE_DOCUMENTATION_TITLE}
-      - PORT=${AUTH_SERVICE_PORT}
-      - RESEND_API_KEY=${RESEND_API_KEY}
-      - EMAIL_FROM=${EMAIL_FROM}
-      - RABBITMQ_URL=${RABBITMQ_URL}
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
       - GOOGLE_CALLBACK_URL=${GOOGLE_CALLBACK_URL}
+      - RESEND_API_KEY=${RESEND_API_KEY}
+      - EMAIL_FROM=${EMAIL_FROM}
+
+  navigation-service:
+    build: ./services/navigation-service
+    container_name: ${NAVIGATION_SERVICE_CONTAINER_NAME}
+    ports:
+      - "${NAVIGATION_SERVICE_PORT}:${NAVIGATION_SERVICE_PORT}"
+    volumes:
+      - ./services/navigation-service/src:/app/src
+    networks:
+      - app-network
+    environment:
+      - NODE_ENV=dev
+      - PORT=${NAVIGATION_SERVICE_PORT}
+      - PROJECT_NAME=${NAVIGATION_SERVICE_DOCUMENTATION_TITLE}
+      - FRONTEND_URL=${FRONTEND_URL}
+      - RABBITMQ_URL=${RABBITMQ_URL}
+      - POSTGRES_URI=${NAVIGATION_SERVICE_POSTGRES_URI}
+      - POSTGRES_TEST_URI=${NAVIGATION_SERVICE_TEST_POSTGRES_URI}
 
   # ----- F R O N T E N D -----
   frontend:
@@ -117,6 +189,9 @@ services:
       - PROJECT_NAME=${AUTH_SERVICE_DOCUMENTATION_TITLE}
       - NEXT_PUBLIC_API_URL=${AUTH_SERVICE_URL}
       - NEXT_PUBLIC_BLOB_STORAGE_URL=${MINIO_URL}
+      - NEXT_PUBLIC_API_KEY=${NEXT_PUBLIC_API_KEY}
+      - NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN=${NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN}
+      - API_SECRET_KEY=${API_SECRET_KEY}
 
 volumes:
   rabbitmq-data:

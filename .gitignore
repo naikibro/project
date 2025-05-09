@@ -140,3 +140,5 @@ terraform.tfvars
 terraform.tfvars.example
 .terraform.lock.hcl
 .terraform/
+
+*.aab

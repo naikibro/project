@@ -13,6 +13,7 @@ export async function setup() {
     imports: [
       AuthModule,
       UsersModule,
+      UsersModule,
       TypeOrmModule.forFeature([User, Role]),
       TypeOrmModule.forRoot(typeOrmTestConfig),
     ],

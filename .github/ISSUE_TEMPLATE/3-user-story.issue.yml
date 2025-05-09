@@ -1,0 +1,58 @@
+name: User Story
+description: Describe a user story for Supmap (as a user, I want to..., so that...)
+title: "[USER STORY] <short description>"
+labels: [user story]
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## 📝 User Story
+
+        Please use the format below to describe your user story.
+
+  - type: input
+    id: role
+    attributes:
+      label: As a...
+      description: Who is the user or role?
+      placeholder: ex. driver, admin, pedestrian, moderator
+    validations:
+      required: true
+
+  - type: textarea
+    id: goal
+    attributes:
+      label: I want to...
+      description: What does the user want to do?
+      placeholder: ex. receive real-time alerts about traffic jams
+    validations:
+      required: true
+
+  - type: textarea
+    id: benefit
+    attributes:
+      label: So that...
+      description: What is the benefit or value for the user?
+      placeholder: ex. I can avoid delays and choose the best route
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance Criteria
+      description: What are the conditions of satisfaction for this story? (bullet points)
+      placeholder: |
+        - [ ] Alerts are shown in real time
+        - [ ] User can see alert details on the map
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Add any other context, screenshots, or mockups about the user story here.
+    validations:
+      required: false
