@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <bitmap
+            android:src="@drawable/baseline_location_pin_24"
+            android:tint="@color/mapbox_white" />
+    </item>
+    <item>
+        <bitmap
+            android:src="@drawable/baseline_location_pin_24"
+            android:tint="@color/mapbox_blue" />
+    </item>
+    <item>
+        <bitmap
+            android:src="@drawable/baseline_location_pin_24"
+            android:tint="@color/mapbox_white" />
+    </item>
+</layer-list> 

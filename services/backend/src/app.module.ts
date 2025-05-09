@@ -11,6 +11,7 @@ import { UsersModule } from './users/users.module';
 import { HealthModule } from './health/health.module';
 import { MailerModule } from './mailer/mailer.module';
 import { ClientsModule, Transport } from '@nestjs/microservices';
+import { AlertsModule } from './alerts/alerts.module';
 const isTest = process.env.NODE_ENV === 'test';
 
 @Module({
@@ -24,6 +25,7 @@ const isTest = process.env.NODE_ENV === 'test';
     UsersModule,
     HealthModule,
     MailerModule,
+    AlertsModule,
     ClientsModule.register([
       {
         name: 'BACKEND_SERVICE',

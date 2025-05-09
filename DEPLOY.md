@@ -1,3 +1,5 @@
+![supmap-logo](./docs/img/bg.gif)
+
 # Deployment Guide
 
 ## Architecture Overview

@@ -1,0 +1,130 @@
+[versions]
+agp = "8.7.3"
+androidVersion = "3.9.0-rc.1"
+appauth = "0.11.1"
+autofill = "2.12.0-beta.1"
+coilCompose = "3.1.0"
+coilComposeVersion = "2.4.0"
+coilKtCoilCompose = "2.6.0"
+composeBomVersion = "2025.04.01"
+converterScalars = "2.9.0"
+copilot = "3.9.0-rc.1"
+credentials = "latest-version"
+googleid = "latest-version"
+gson = "2.10.1"
+kotlin = "2.1.0"
+coreKtx = "1.15.0"
+junit = "4.13.2"
+lifecycleRuntimeCompose = "2.8.7"
+lifecycleRuntimeKtx = "2.8.7"
+activityCompose = "1.10.0"
+composeBom = "2025.02.00"
+junitJupiter = "5.8.1"
+mapboxAndroid = "10.16.1"
+mapboxSearchAndroidUiVersion = "2.12.0-beta.1"
+mapboxSearchAndroidVersion = "2.12.0-beta.1"
+mockitoAndroid = "4.11.0"
+mockitoCore = "4.11.0"
+mockitoInline = "5.2.0"
+mockitoKotlinVersion = "5.2.0"
+mockwebserver = "4.9.3"
+okhttp = "4.10.0"
+playServicesAuth = "21.3.0"
+playServicesAuthVersion = "20.7.0"
+playServicesLocation = "21.3.0"
+robolectric = "4.14"
+tripdata = "3.9.0-rc.1"
+uiComponents = "3.9.0-rc.1"
+uiMaps = "3.9.0-rc.1"
+uiTestJunit4 = "<version>"
+appcompat = "1.7.0"
+material = "1.12.0"
+activity = "1.10.0"
+espressoIntents = "3.6.1"
+android = "11.10.2"
+espressoIntentsVersion = "3.5.1"
+hiltAndroid = "2.48"
+mapsCompose = "11.10.2"
+mockitoAndroidVersion = "5.5.0"
+mockitoCoreVersion = "5.5.0"
+mockitoKotlin = "5.0.0"
+uiText = "1.8.0"
+voice = "3.9.0-rc.1"
+roomRuntimeAndroid = "2.7.1"
+
+[libraries]
+android-v10161 = { module = "com.mapbox.maps:android", version.ref = "mapboxAndroid" }
+androidx-compose-bom-v20250401 = { module = "androidx.compose:compose-bom", version.ref = "composeBomVersion" }
+androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
+androidx-credentials = { module = "androidx.credentials:credentials", version = "1.5.0" }
+androidx-credentials-play-services-auth = { module = "androidx.credentials:credentials-play-services-auth", version.ref = "credentials" }
+androidx-lifecycle-runtime-compose = { module = "androidx.lifecycle:lifecycle-runtime-compose", version.ref = "lifecycleRuntimeCompose" }
+androidx-lifecycle-viewmodel-compose = { module = "androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "lifecycleRuntimeCompose" }
+androidx-ui-text = { module = "androidx.compose.ui:ui-text", version.ref = "uiText" }
+androidx-ui-text-android = { module = "androidx.compose.ui:ui-text-android", version.ref = "uiText" }
+appauth = { module = "net.openid:appauth", version.ref = "appauth" }
+autofill = { module = "com.mapbox.search:autofill", version.ref = "autofill" }
+coil = { module = "io.coil-kt.coil3:coil", version.ref = "coilCompose" }
+coil-compose = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coilCompose" }
+coil-compose-v260 = { module = "io.coil-kt:coil-compose", version.ref = "coilKtCoilCompose" }
+coil-kt-coil-compose = { module = "io.coil-kt:coil-compose", version.ref = "coilComposeVersion" }
+coil-network-okhttp = { module = "io.coil-kt.coil3:coil-network-okhttp", version.ref = "coilCompose" }
+converter-gson = { module = "com.squareup.retrofit2:converter-gson", version.ref = "converterScalars" }
+converter-scalars = { module = "com.squareup.retrofit2:converter-scalars", version.ref = "converterScalars" }
+copilot = { module = "com.mapbox.navigationcore:copilot", version.ref = "copilot" }
+discover = { module = "com.mapbox.search:discover", version.ref = "autofill" }
+googleid = { module = "com.google.android.libraries.identity.googleid:googleid", version.ref = "googleid" }
+gson = { module = "com.google.code.gson:gson", version.ref = "gson" }
+junit = { group = "junit", name = "junit", version.ref = "junit" }
+androidx-junit = { group = "androidx.test.ext", name = "junit" }
+androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core" }
+androidx-lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "lifecycleRuntimeKtx" }
+androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityCompose" }
+androidx-compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "composeBom" }
+androidx-ui = { group = "androidx.compose.ui", name = "ui" }
+androidx-ui-graphics = { group = "androidx.compose.ui", name = "ui-graphics" }
+androidx-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling" }
+androidx-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-tooling-preview" }
+androidx-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest" }
+androidx-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
+androidx-material3 = { group = "androidx.compose.material3", name = "material3" }
+junit-jupiter = { group = "org.junit.jupiter", name = "junit-jupiter", version.ref = "junitJupiter" }
+mapbox-search-android-ui-v2120beta1 = { module = "com.mapbox.search:mapbox-search-android-ui", version.ref = "mapboxSearchAndroidUiVersion" }
+mapbox-search-android-v2120beta1 = { module = "com.mapbox.search:mapbox-search-android", version.ref = "mapboxSearchAndroidVersion" }
+mockito-android = { module = "org.mockito:mockito-android", version.ref = "mockitoAndroid" }
+mockito-core = { module = "org.mockito:mockito-core", version.ref = "mockitoCore" }
+mockito-inline = { module = "org.mockito:mockito-inline", version.ref = "mockitoInline" }
+mockito-kotlin-v520 = { module = "org.mockito.kotlin:mockito-kotlin", version.ref = "mockitoKotlinVersion" }
+mockwebserver = { module = "com.squareup.okhttp3:mockwebserver", version.ref = "mockwebserver" }
+navigationcore-android = { module = "com.mapbox.navigationcore:android", version.ref = "androidVersion" }
+offline = { module = "com.mapbox.search:offline", version.ref = "autofill" }
+okhttp = { module = "com.squareup.okhttp3:okhttp", version.ref = "okhttp" }
+place-autocomplete = { module = "com.mapbox.search:place-autocomplete", version.ref = "autofill" }
+play-services-auth = { module = "com.google.android.gms:play-services-auth", version.ref = "playServicesAuth" }
+play-services-auth-v2070 = { module = "com.google.android.gms:play-services-auth", version.ref = "playServicesAuthVersion" }
+play-services-location = { module = "com.google.android.gms:play-services-location", version.ref = "playServicesLocation" }
+retrofit = { module = "com.squareup.retrofit2:retrofit", version.ref = "converterScalars" }
+robolectric = { module = "org.robolectric:robolectric", version.ref = "robolectric" }
+tripdata = { module = "com.mapbox.navigationcore:tripdata", version.ref = "tripdata" }
+ui-components = { module = "com.mapbox.navigationcore:ui-components", version.ref = "uiComponents" }
+ui-maps = { module = "com.mapbox.navigationcore:ui-maps", version.ref = "uiMaps" }
+ui-test-junit4 = { module = "androidx.compose.ui:ui-test-junit4", version.ref = "uiTestJunit4" }
+androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
+material = { group = "com.google.android.material", name = "material", version.ref = "material" }
+androidx-activity = { group = "androidx.activity", name = "activity", version.ref = "activity" }
+androidx-espresso-intents = { group = "androidx.test.espresso", name = "espresso-intents", version.ref = "espressoIntents" }
+android = { module = "com.mapbox.maps:android", version.ref = "android" }
+androidx-espresso-intents-v351 = { module = "androidx.test.espresso:espresso-intents", version.ref = "espressoIntentsVersion" }
+hilt-android = { module = "com.google.dagger:hilt-android", version.ref = "hiltAndroid" }
+maps-compose = { module = "com.mapbox.extension:maps-compose", version.ref = "mapsCompose" }
+mockito-android-v550 = { module = "org.mockito:mockito-android", version.ref = "mockitoAndroidVersion" }
+mockito-core-v550 = { module = "org.mockito:mockito-core", version.ref = "mockitoCoreVersion" }
+mockito-kotlin = { module = "org.mockito.kotlin:mockito-kotlin", version.ref = "mockitoKotlin" }
+voice = { module = "com.mapbox.navigationcore:voice", version.ref = "voice" }
+androidx-room-runtime-android = { group = "androidx.room", name = "room-runtime-android", version.ref = "roomRuntimeAndroid" }
+
+[plugins]
+android-application = { id = "com.android.application", version.ref = "agp" }
+kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
+kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+

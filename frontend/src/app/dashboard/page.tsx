@@ -1,8 +1,10 @@
 "use client";
-import { Tab, Tabs } from "@mui/material";
+import { BarChart, Group, Person } from "@mui/icons-material";
+import { Divider, Tab, Tabs } from "@mui/material";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
+import Analytics from "src/components/admin/analytics/Analytics";
 import AdminUsersPanel from "src/components/admin/users/AdminUsersPanel";
 import ConfirmDeleteDialog from "src/components/common/ConfirmDeleteDialog";
 import ProfileManager from "src/components/common/ProfileManager";
@@ -14,7 +16,7 @@ export default function Dashboard() {
   const router = useRouter();
   const [selectedTab, setSelectedTab] = useState(0);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const isAdmin = user?.role?.name === "Admin";
+  const isAdmin = user && user.role?.name === "Admin";
 
   useEffect(() => {
     if (!user && !loading) {
@@ -60,11 +62,11 @@ export default function Dashboard() {
   return (
     <div
       aria-label="user-dashboard"
-      className="min-h-screen py-32 flex items-start justify-center bg-gray-100"
+      className="min-h-screen py-8 flex items-start justify-center bg-gray-100"
     >
       <div
         aria-label="dashboard"
-        className="max-w-4xl w-full bg-white shadow-md rounded-lg px-8 pt-8 pb-16"
+        className="max-w-6xl w-full bg-white shadow-md rounded-lg px-8 pt-8 pb-16"
       >
         <h1
           aria-label="header-title"
@@ -81,20 +83,26 @@ export default function Dashboard() {
         </div>
 
         <Tabs aria-label="tabs" value={selectedTab} onChange={handleTabChange}>
-          <Tab label="My Profile" />
-          {isAdmin && <Tab label="Users Management" />}
+          {isAdmin && <Tab value={0} label="Analytics" icon={<BarChart />} />}
+          {isAdmin && (
+            <Tab value={1} label="Users Management" icon={<Group />} />
+          )}
+          <Tab value={isAdmin ? 2 : 0} label="My Profile" icon={<Person />} />
         </Tabs>
+        <Divider />
 
-        {selectedTab === 0 && (
-          <ProfileManager
-            user={user}
-            onDelete={() => {
-              setDeleteDialogOpen(true);
-              handleDelete();
-            }}
-          />
-        )}
-
+        {user &&
+          ((isAdmin && selectedTab === 2) ||
+            (!isAdmin && selectedTab === 0)) && (
+            <ProfileManager
+              user={user}
+              onDelete={() => {
+                setDeleteDialogOpen(true);
+                handleDelete();
+              }}
+            />
+          )}
+        {selectedTab === 0 && isAdmin && <Analytics />}
         {selectedTab === 1 && isAdmin && <AdminUsersPanel />}
 
         {/* Confirm Account Deletion Dialog */}

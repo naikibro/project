@@ -12,7 +12,7 @@ import {
   Typography,
 } from "@mui/material";
 import Image from "next/image";
-import logo from "public/images/logo-full-black.png";
+import logo from "public/img/logo-full.png";
 import React, { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { useAuthStore } from "src/store/useAuthStore";
@@ -154,16 +154,6 @@ const SignInPage: React.FC = () => {
                 Sign Up
               </Link>
             </Typography>
-            <Button
-              type="submit"
-              fullWidth
-              variant="contained"
-              color="primary"
-              sx={{ mt: 3 }}
-              disabled={loading}
-            >
-              {loading ? "Signing In..." : "Sign In"}
-            </Button>
           </Box>
         </Paper>
       </Box>

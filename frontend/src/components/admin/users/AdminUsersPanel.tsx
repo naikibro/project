@@ -48,10 +48,7 @@ const AdminUsersPanel = () => {
   }
 
   return (
-    <Container
-      aria-label="admin-users-panel"
-      sx={{ mt: 4, py: 2, borderTop: "1px solid black" }}
-    >
+    <Container aria-label="admin-users-panel" sx={{ mt: 4, py: 2 }}>
       <h2
         aria-label="hotels-title"
         className={`tracking-tighter sm:text-3xl md:text-4xl lg:text-5xl mb-0 ${playfair.variable} font-serif`}

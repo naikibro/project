@@ -13,7 +13,7 @@ import {
 } from "@mui/material";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import logo from "public/images/logo-full-black.png";
+import logo from "public/img/logo-full.png";
 import React, { useState } from "react";
 import toast from "react-hot-toast";
 import { useAuthStore } from "src/store/useAuthStore";
