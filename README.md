@@ -78,28 +78,30 @@ docker compose up --build -d
 
 ## Features
 
-| Feature                                       | Status | Notes/Details                                                          |
-| --------------------------------------------- | ------ | ---------------------------------------------------------------------- |
-| **User Authentication (OAuth2 & Standard)**   | ✅     | Google OAuth2 and standard login supported, even has password recovery |
-| **Real-time Map Display**                     | ✅     | Mapbox integration, real-time updates                                  |
-| **Route Calculation (Optimized)**             | ✅     | Best route based on traffic                                            |
-| **Automatic Route Recalculation**             | ✅     | Route updates on incident/traffic change                               |
-| **Incident Reporting**                        | ✅     | Users can report accidents, jams, closures, police, obstacles          |
-| **Incident Validation/Community Voting**      | ✅     | Users can upvote/downvote/validate incidents                           |
-| **Alert Management**                          | ✅     | Real-time alerts on route (accidents, jams, etc.)                      |
-| **Route Choice (avoid tolls, etc.)**          | ❌     | not done                                                               |
-| **Driving Instructions**                      | ❌     | Turn-by-turn navigation, not done                                      |
-| **Geolocation & Visual Progress**             | ✅     | User location and route progress shown on map                          |
-| **Send Route to Mobile/QR Code**              | ❌     | QR code generation: partial/in progress                                |
-| **Web Dashboard for Data Management**         | ✅     | Basic dashboard for viewing alerts                                     |
-| **Role-based Permissions**                    | ✅     | RBAC, different roles lead to different capabilities                   |
-| **Data Encryption (at rest & in transit)**    | ✅     | HTTPS enforced, sensitive data encrypted in DB                         |
-| **Protection against XSS/CSRF/SQL Injection** | ✅     | Standard web security practices                                        |
-| **Efficient Data Storage**                    | ✅     | Scalable DB for incidents, routes, traffic                             |
-| **Traffic Data Analysis/Statistics**          | ✅     | Basic stats available, advanced analytics in progress                  |
-| **Traffic Jam Prediction (historical data)**  | ✅     | Daily data pipeline to predict regional traffic                        |
-| **Containerized Deployment (docker-compose)** | ✅     | All services deployable via docker-compose                             |
-| **Documentation (Technical & User)**          | ✅     | README, setup, and user guide provided                                 |
+See all our demos [here](https://www.youtube.com/playlist?list=PL1aKYgl1au6-A316Cm7tF_XKqPEY9m5qG)
+
+| Feature                                       | Status | Notes/Details                                                                                         |
+| --------------------------------------------- | ------ | ----------------------------------------------------------------------------------------------------- |
+| **User Authentication (OAuth2 & Standard)**   | ✅     | Google OAuth2 and standard login supported, even has password recovery                                |
+| **Real-time Map Display**                     | ✅     | Mapbox integration, real-time updates                                                                 |
+| **Route Calculation (Optimized)**             | ✅     | Best route based on traffic                                                                           |
+| **Automatic Route Recalculation**             | ✅     | Route updates on incident/traffic change                                                              |
+| **Incident Reporting**                        | ✅     | Users can report accidents, jams, closures, police, obstacles                                         |
+| **Incident Validation/Community Voting**      | ✅     | Users can upvote/downvote/validate incidents                                                          |
+| **Alert Management**                          | ✅     | Real-time alerts on route (accidents, jams, etc.)                                                     |
+| **Route Choice (avoid tolls, etc.)**          | ❌     | not done                                                                                              |
+| **Driving Instructions**                      | ❌     | Turn-by-turn navigation, not done                                                                     |
+| **Geolocation & Visual Progress**             | ✅     | User location and route progress shown on map                                                         |
+| **Send Route to Mobile/QR Code**              | ❌     | QR code generation: partial/in progress                                                               |
+| **Web Dashboard for Data Management**         | ✅     | Basic dashboard for viewing alerts                                                                    |
+| **Role-based Permissions**                    | ✅     | RBAC, different roles lead to different capabilities                                                  |
+| **Data Encryption (at rest & in transit)**    | ✅     | HTTPS enforced, sensitive data encrypted in DB                                                        |
+| **Protection against XSS/CSRF/SQL Injection** | ✅     | Standard web security practices                                                                       |
+| **Efficient Data Storage**                    | ✅     | Scalable DB for incidents, routes, traffic                                                            |
+| **Traffic Data Analysis/Statistics**          | ✅     | Basic stats available, advanced analytics in progress                                                 |
+| **Traffic Jam Prediction (historical data)**  | ✅     | Daily data pipeline to predict regional traffic ( see [this repository](./data-prediction/README.md)) |
+| **Containerized Deployment (docker-compose)** | ✅     | All services deployable via docker-compose                                                            |
+| **Documentation (Technical & User)**          | ✅     | README, setup, and user guide provided                                                                |
 
 ---
 
